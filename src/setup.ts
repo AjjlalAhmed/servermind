@@ -170,12 +170,17 @@ async function main() {
     env.AI_BACKEND = "openai";
     const presets = [
       { name: "Google Gemini (free, ~1,500/day)", base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash", key: true, keyUrl: "https://aistudio.google.com/apikey" },
-      { name: "Groq (free, very fast)", base: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", key: true, keyUrl: "https://console.groq.com/keys" },
+      { name: "Groq — fast inference (api.groq.com, gsk_ keys)", base: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", key: true, keyUrl: "https://console.groq.com/keys" },
+      { name: "xAI Grok — Elon's Grok (api.x.ai, xai- keys)", base: "https://api.x.ai/v1", model: "grok-3", key: true, keyUrl: "https://console.x.ai" },
       { name: "OpenRouter", base: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free", key: true, keyUrl: "https://openrouter.ai/keys" },
       { name: "Ollama (local, no key)", base: "http://127.0.0.1:11434/v1", model: "llama3.1", key: false, keyUrl: "" },
       { name: "Custom OpenAI-compatible endpoint", base: "", model: "", key: true, keyUrl: "" },
     ];
+    // "Groq" (fast inference) and "xAI Grok" sound alike but are different services
+    // with different keys — flag it so nobody pastes one into the other.
+    note('Heads up: "Groq" and "xAI Grok" are different services — pick the one your key is for.');
     const p = presets[await choose("Provider", presets.map((x) => x.name))]!;
+    if (p.base === "https://api.x.ai/v1") note("If the model errors, list valid ids: curl https://api.x.ai/v1/models -H \"Authorization: Bearer <key>\"");
     env.AI_BASE_URL = (await ask("API base URL", { def: p.base })).replace(/\/+$/, "");
     env.AI_MODEL = await ask("Model", { def: p.model });
 
