@@ -110,11 +110,13 @@ async function main() {
   if (cur.get("SERVERMIND_PASSWORD_HASH") && !(await confirm("A password is already set. Change it?", false))) {
     note("Keeping existing password.");
   } else {
+    note("Typing is hidden — you won't see the characters. Press enter when done.");
     let pw = "";
     for (;;) {
-      pw = await ask("Choose a password (min 8 chars)", { hidden: true });
-      if (pw.length < 8) { warn("Too short."); continue; }
-      if ((await ask("Confirm password", { hidden: true })) !== pw) { warn("Didn't match."); continue; }
+      pw = await ask("Choose a password — at least 8 characters", { hidden: true });
+      if (pw.length < 8) { warn("Too short — use at least 8 characters."); continue; }
+      const pw2 = await ask("Confirm password — type the same one again", { hidden: true });
+      if (pw2 !== pw) { warn("Those didn't match — let's try again."); continue; }
       break;
     }
     env.SERVERMIND_PASSWORD_HASH = Buffer.from(await Bun.password.hash(pw, "argon2id"), "utf8").toString("base64");
@@ -155,22 +157,43 @@ async function main() {
   } else {
     env.AI_BACKEND = "openai";
     const presets = [
-      { name: "Google Gemini (free, ~1,500/day)", base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash", key: true },
-      { name: "Groq (free, very fast)", base: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", key: true },
-      { name: "OpenRouter", base: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free", key: true },
-      { name: "Ollama (local, no key)", base: "http://127.0.0.1:11434/v1", model: "llama3.1", key: false },
-      { name: "Custom OpenAI-compatible endpoint", base: "", model: "", key: true },
+      { name: "Google Gemini (free, ~1,500/day)", base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash", key: true, keyUrl: "https://aistudio.google.com/apikey" },
+      { name: "Groq (free, very fast)", base: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", key: true, keyUrl: "https://console.groq.com/keys" },
+      { name: "OpenRouter", base: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free", key: true, keyUrl: "https://openrouter.ai/keys" },
+      { name: "Ollama (local, no key)", base: "http://127.0.0.1:11434/v1", model: "llama3.1", key: false, keyUrl: "" },
+      { name: "Custom OpenAI-compatible endpoint", base: "", model: "", key: true, keyUrl: "" },
     ];
     const p = presets[await choose("Provider", presets.map((x) => x.name))]!;
     env.AI_BASE_URL = (await ask("API base URL", { def: p.base })).replace(/\/+$/, "");
     env.AI_MODEL = await ask("Model", { def: p.model });
-    env.AI_API_KEY = p.key ? await ask("API key", { hidden: true, def: cur.get("AI_API_KEY") || "" }) : "";
+
+    // API key. This is the step people skip by accident — so make it loud, show
+    // where to get one, and don't let an empty key slip through silently.
+    if (p.key) {
+      console.log("");
+      note("This provider needs an API key — without it the assistant won't work.");
+      if (p.keyUrl) note(`Get a free key here, then paste it below:  ${C.accent}${p.keyUrl}${C.reset}`);
+      const existing = cur.get("AI_API_KEY") || "";
+      for (;;) {
+        const k = (await ask(existing ? "Paste your API key (enter to keep the saved one)" : "Paste your API key (required)", { hidden: true, def: existing })).trim();
+        if (k) { env.AI_API_KEY = k; break; }
+        warn("No key entered — the AI will NOT work until you set one.");
+        if (await confirm("Skip for now and add AI_API_KEY to .env later?", false)) { env.AI_API_KEY = ""; break; }
+      }
+    } else {
+      env.AI_API_KEY = "";
+    }
     if (env.AI_API_KEY.includes("$")) warn("Key contains '$' which .env may mangle — regenerate a key without '$' if login fails.");
-    if (await confirm("Test the connection now?", true)) {
-      process.stdout.write("  testing… ");
-      const t = await testAI(env.AI_BASE_URL, env.AI_API_KEY, env.AI_MODEL);
-      console.log(t.ok ? `${C.green}ok${C.reset}` : `${C.red}failed${C.reset}`);
-      if (!t.ok) warn(t.msg || "connection failed — you can fix AI_* in .env later.");
+
+    if (env.AI_API_KEY || !p.key) {
+      if (await confirm("Test the connection now?", true)) {
+        process.stdout.write("  testing… ");
+        const t = await testAI(env.AI_BASE_URL, env.AI_API_KEY, env.AI_MODEL);
+        console.log(t.ok ? `${C.green}ok${C.reset}` : `${C.red}failed${C.reset}`);
+        if (!t.ok) warn(t.msg || "connection failed — fix AI_* in .env, then run: pm2 reload servermind");
+      }
+    } else {
+      warn("Skipping the test — no key set. Add AI_API_KEY to .env and run: pm2 reload servermind");
     }
   }
 
