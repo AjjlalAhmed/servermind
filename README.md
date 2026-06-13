@@ -122,6 +122,24 @@ session cookie is marked `Secure`.
 Auth (`SERVERMIND_PASSWORD_HASH`, `SERVERMIND_TOTP_SECRET`) is written by the
 wizard — never edit by hand. `.env` is gitignored and never leaves your server.
 
+## Uninstall
+
+```bash
+curl -fsSL https://servermind.dev/uninstall.sh | bash
+```
+Or, from a cloned repo: `bun run uninstall`. It stops and removes the
+`servermind` PM2 process (`pm2 save` so it stays gone after reboot) and — after
+you confirm — deletes the install directory, including its `.env` and logs. Bun,
+PM2, and git are left in place (you likely use them elsewhere); the script prints
+the commands to remove those too if you want.
+
+Manual equivalent:
+```bash
+pm2 delete servermind && pm2 save
+rm -rf ~/servermind          # contains .env + logs
+pm2 unstartup                # only if ServerMind was your boot-start app
+```
+
 ## Security
 
 Security is enforced **server-side**, not by trusting the model:

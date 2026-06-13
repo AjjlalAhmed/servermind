@@ -118,6 +118,7 @@
       <a href="#ai">Choose your AI</a>
       <a href="#access">Accessing it</a>
       <a href="#after">After install</a>
+      <a href="#uninstall">Uninstall</a>
       <a href="#security">Security model</a>
       <a href="#troubleshooting">Troubleshooting</a>
     </aside>
@@ -257,9 +258,28 @@ servermind.example.com {
         <p>First login: open the UI, enter your password and the current 6-digit TOTP code. To make a change to your server, flip <strong>“Arm mutations”</strong> in the UI first — it auto-disarms after a few minutes.</p>
       </section>
 
+      <!-- Uninstall -->
+      <section id="uninstall" class="reveal">
+        <h2><span class="h2-no">06</span> Uninstall</h2>
+        <p class="lead">One command removes ServerMind cleanly. It won't touch Bun, PM2, or git — you probably use those elsewhere.</p>
+        <div class="codeblock">
+          <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/uninstall.sh | bash</code></pre>
+          <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/uninstall.sh | bash" aria-label="Copy uninstall command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <p>From a cloned repo you can run <code>bun run uninstall</code> instead. It stops and deletes the <code>servermind</code> PM2 process (and runs <code>pm2 save</code> so it stays gone after a reboot), then — after you confirm — removes the install directory, including its <code>.env</code> and logs.</p>
+        <div class="callout warn"><span class="ct">Heads up</span>Deleting the install directory removes your <code>.env</code> — the password hash, 2FA secret, and AI key. Back it up first if you plan to reinstall with the same settings.</div>
+        <h3>Manual equivalent</h3>
+        <div class="codeblock"><pre><code><span class="prompt">$</span> pm2 delete servermind &amp;&amp; pm2 save
+<span class="prompt">$</span> rm -rf ~/servermind          <span class="cmt"># contains .env + logs</span>
+<span class="prompt">$</span> pm2 unstartup                <span class="cmt"># only if ServerMind was your boot-start app</span></code></pre></div>
+      </section>
+
       <!-- Security -->
       <section id="security" class="reveal">
-        <h2><span class="h2-no">06</span> Security model</h2>
+        <h2><span class="h2-no">07</span> Security model</h2>
         <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
@@ -272,7 +292,7 @@ servermind.example.com {
 
       <!-- Troubleshooting -->
       <section id="troubleshooting" class="reveal">
-        <h2><span class="h2-no">07</span> Troubleshooting</h2>
+        <h2><span class="h2-no">08</span> Troubleshooting</h2>
 
         <h3>I can't open the dashboard</h3>
         <p>It's bound to localhost by design. From your laptop, open an SSH tunnel (<a href="#access">above</a>) and visit <code>http://localhost:5500</code> — don't expect to hit the server's public IP directly.</p>

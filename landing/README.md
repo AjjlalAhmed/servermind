@@ -1,11 +1,27 @@
 # ServerMind landing site
 
-The marketing site for **servermind.dev**. Static, self-contained — `index.html`
-+ `style.css` + `script.js`. No build step.
+The marketing site for **servermind.dev**. Static, self-contained, no build step.
 
-Design: Linear-inspired dark, sharing the app's palette (`#08090A`, indigo
-`#5E6AD2`, Geist). Sections: hero + install command, feature grid, how-it-works,
-security, final CTA, footer.
+Design: Linear-inspired dark — amber accent (`#F5A524` / `#FBBF24`) on near-black
+`#0B0A07`, Geist (sans + mono). Mindy, the daemon mascot, leads the hero.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Landing page (hero, features, how-it-works, security, FAQ, CTA) |
+| `docs.html` | Setup guide (requirements → install → AI → access → uninstall → security → troubleshooting) |
+| `style.css` / `script.js` / `award.js` | Styles + interactions (shared by both pages) |
+| `favicon.svg` | Site icon (the Mindy daemon) |
+| `og.png` | Social share card, 1200×630 |
+| `og-source.html` | Editable source for `og.png` (regen command in its header comment) |
+| `robots.txt` | Allows search + AI crawlers (GPTBot, PerplexityBot, ClaudeBot, Google-Extended…) |
+| `sitemap.xml` | Lists `/` and `/docs.html` |
+| `llms.txt` | Plain-text brief for LLMs (GEO) |
+| `mascot/` | Standalone mascot playground (unlinked; optional to deploy) |
+
+`og.png`, `robots.txt`, `sitemap.xml`, and `llms.txt` are referenced at the site
+**root**, so they must be served from `https://servermind.dev/<file>`.
 
 ## Preview locally
 ```bash
@@ -14,32 +30,45 @@ python3 -m http.server 4321    # or: bunx serve .
 # open http://localhost:4321
 ```
 
-## Deploy options
+## Deploy
 
-### A. Caddy on your VPS (serves the site + the install script)
+The site root must serve the `landing/` files **plus** `install.sh` and
+`uninstall.sh` (which live at the repo root, not in `landing/`), so that:
+
+- `https://servermind.dev` → landing page
+- `https://servermind.dev/docs.html` → setup guide
+- `https://servermind.dev/install.sh` → installer (`curl … | bash`)
+- `https://servermind.dev/uninstall.sh` → uninstaller
+- `https://servermind.dev/og.png` · `/robots.txt` · `/sitemap.xml` · `/llms.txt`
+
+### A. Caddy on your VPS
 Point `servermind.dev` DNS at your server, then in `/etc/caddy/Caddyfile`:
 ```caddy
 servermind.dev {
     encode zstd gzip
-    root * /var/www/servermind-landing
+    root * /var/www/servermind-site
     file_server
 }
 ```
-Copy the `landing/` files to `/var/www/servermind-landing/`, drop your
-`install.sh` in the same folder, then `systemctl reload caddy`. Now:
-- `https://servermind.dev` → the landing page
-- `https://servermind.dev/install.sh` → the installer
+```bash
+mkdir -p /var/www/servermind-site
+cp -r landing/* /var/www/servermind-site/
+cp install.sh uninstall.sh /var/www/servermind-site/   # from the repo root
+systemctl reload caddy
+```
 
 ### B. Vercel / Netlify / Cloudflare Pages
-Point the project at this `landing/` directory — no build command, output dir `.`.
-Add `servermind.dev` as a custom domain. (Host `install.sh` separately, e.g. on
-your VPS or GitHub raw, and link it.)
+Point the project at the `landing/` directory — no build command, output dir `.`
+— and add `servermind.dev` as a custom domain. Then host `install.sh` and
+`uninstall.sh` at the root too (copy them into `landing/` for the deploy, or
+serve them via a redirect/rewrite to GitHub raw).
 
 ### C. GitHub Pages
-Push `landing/` to a repo, enable Pages on that folder, set the custom domain to
-`servermind.dev`.
+Publish `landing/` and set the custom domain to `servermind.dev`. Copy
+`install.sh` / `uninstall.sh` into the published folder so the root URLs resolve.
 
-## Before going live
-- Replace the `https://github.com/` placeholder links with your real repo URL.
-- Swap the install command if your final installer URL differs.
-- Add an OG image (`og.png`, 1200×630) and reference it in the `<head>`.
+## After going live
+- Submit `https://servermind.dev/sitemap.xml` in Google Search Console.
+- Verify the OG card renders (paste the URL into Slack/X, or use a card
+  validator). Regenerate `og.png` from `og-source.html` if you edit the copy.
+- Sanity-check `curl -fsSL https://servermind.dev/install.sh | bash` resolves.

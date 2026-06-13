@@ -10,6 +10,7 @@
     "mcp": "bun run src/mcp-server.ts",
     "setup": "bun run src/setup.ts",
     "setup-auth": "bun run src/setup-auth.ts",
+    "uninstall": "bash uninstall.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
