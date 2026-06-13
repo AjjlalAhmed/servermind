@@ -65,6 +65,18 @@ async function detectProxies(): Promise<{ caddy: string; nginx: string }> {
   return { caddy, nginx };
 }
 
+// Best-effort hunt for a pm2 binary, so the operator doesn't have to know the
+// path. Returns the distinct candidates that actually exist, most-likely first.
+async function findPm2(): Promise<string[]> {
+  const found: string[] = [];
+  const add = (p: string) => { if (p && !found.includes(p)) found.push(p); };
+  add(await which("pm2")); // current user's PATH
+  for (const c of ["/root/.bun/bin/pm2", "/usr/local/bin/pm2", "/usr/bin/pm2", "/root/.npm-global/bin/pm2", "/root/.yarn/bin/pm2"]) {
+    if (await Bun.file(c).exists()) add(c);
+  }
+  return found;
+}
+
 // Ready-to-paste reverse-proxy snippets. Both disable response buffering so the
 // chat's Server-Sent-Events stream isn't held back, and pass X-Forwarded-Proto
 // so ServerMind marks the session cookie Secure (see auth/session.ts).
@@ -186,11 +198,29 @@ async function main() {
     if (env.AI_API_KEY.includes("$")) warn("Key contains '$' which .env may mangle — regenerate a key without '$' if login fails.");
 
     if (env.AI_API_KEY || !p.key) {
-      if (await confirm("Test the connection now?", true)) {
+      let testing = await confirm("Test the connection now?", true);
+      while (testing) {
         process.stdout.write("  testing… ");
         const t = await testAI(env.AI_BASE_URL, env.AI_API_KEY, env.AI_MODEL);
-        console.log(t.ok ? `${C.green}ok${C.reset}` : `${C.red}failed${C.reset}`);
-        if (!t.ok) warn(t.msg || "connection failed — fix AI_* in .env, then run: pm2 reload servermind");
+        if (t.ok) { console.log(`${C.green}ok${C.reset}`); break; }
+        console.log(`${C.red}failed${C.reset}`);
+        warn(t.msg || "connection failed");
+        // 429 = the key authenticated fine but hit a quota/rate cap — not a config error.
+        if ((t.msg || "").includes("429")) {
+          note("HTTP 429 means your key works but hit a quota/rate limit. You can continue —");
+          note("it usually clears within a minute (free tiers reset per-minute).");
+        }
+        // Let the operator go back and edit instead of being stuck.
+        const fix = await choose("What now?", [
+          "Re-enter the API key, then test again",
+          "Change the model, then test again",
+          "Change the base URL, then test again",
+          "Continue anyway (you can fix AI_* in .env later)",
+        ]);
+        if (fix === 0) env.AI_API_KEY = (await ask("Paste your API key", { hidden: true, def: env.AI_API_KEY })).trim();
+        else if (fix === 1) env.AI_MODEL = await ask("Model", { def: env.AI_MODEL });
+        else if (fix === 2) env.AI_BASE_URL = (await ask("API base URL", { def: env.AI_BASE_URL })).replace(/\/+$/, "");
+        else testing = false; // continue anyway
       }
     } else {
       warn("Skipping the test — no key set. Add AI_API_KEY to .env and run: pm2 reload servermind");
@@ -251,10 +281,20 @@ async function main() {
   heading("5 · PM2");
   note("PM2 is per-user. If your apps were started by a different user (e.g. root), point ServerMind at that daemon.");
   if (await confirm("Do your apps run under another user's PM2?", cur.get("PM2_COMMAND")?.includes("sudo") || false)) {
-    const path = await ask("Full path to that pm2", { def: "/root/.bun/bin/pm2" });
+    const detected = await findPm2();
+    if (detected.length) {
+      ok(`Found pm2 at: ${detected.join("  ·  ")}`);
+    } else {
+      note("Couldn't auto-detect pm2. Don't know the path? Run this as that user and copy the result:");
+      console.log(`    ${C.accent}sudo -u root which pm2${C.reset}   ${C.dim}# common spot: /root/.bun/bin/pm2${C.reset}`);
+    }
+    const prev = cur.get("PM2_COMMAND")?.split(/\s+/).pop();
+    const path = await ask("Full path to that pm2", { def: detected[0] || prev || "/root/.bun/bin/pm2" });
     env.PM2_COMMAND = `sudo -n ${path}`;
-    warn("Grant passwordless sudo for it (run as root):");
-    console.log(`  ${C.dim}echo 'claudeuser ALL=(root) NOPASSWD: ${path} jlist, ${path} list, ${path} restart *, ${path} stop *, ${path} logs *' | sudo tee /etc/sudoers.d/servermind-pm2 && sudo chmod 440 /etc/sudoers.d/servermind-pm2${C.reset}`);
+    note("If this path is wrong, ServerMind still runs fine — only the PM2 panel stays empty.");
+    note("You can fix PM2_COMMAND in .env and run `pm2 reload servermind` anytime.");
+    warn("Grant passwordless sudo for it (run as root, replacing <user> with the user ServerMind runs as):");
+    console.log(`  ${C.dim}echo '<user> ALL=(root) NOPASSWD: ${path} jlist, ${path} list, ${path} restart *, ${path} stop *, ${path} logs *' | sudo tee /etc/sudoers.d/servermind-pm2 && sudo chmod 440 /etc/sudoers.d/servermind-pm2${C.reset}`);
   } else {
     env.PM2_COMMAND = "pm2";
   }
