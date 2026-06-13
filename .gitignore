@@ -1,0 +1,16 @@
+node_modules/
+.bun-cache/
+
+# secrets — never commit any .env except the example
+.env
+.env.*
+!.env.example
+
+# personal / development docs — kept local, never published
+guides/
+
+*.log
+logs/
+bun.lockb
+.DS_Store
+dist/

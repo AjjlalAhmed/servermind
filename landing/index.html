@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServerMind — Manage your server by talking to it</title>
+<meta name="description" content="A self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — all from one chat. Bring your own AI: free Gemini or Claude." />
+<meta name="theme-color" content="#08090A" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ServerMind — Manage your server by talking to it" />
+<meta property="og:description" content="Self-hosted AI assistant for your Linux server. One command to install. Bring your own AI." />
+<meta property="og:url" content="https://servermind.dev" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ─── nav ─── -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#security">Security</a>
+      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="#install">Get started</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ─── hero ─── -->
+  <section class="hero">
+    <div class="glow"></div>
+    <div class="container hero-inner">
+      <a class="pill reveal" href="#ai">
+        <span class="pill-dot"></span> Bring your own AI — free Gemini or Claude
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <h1 class="reveal">Manage your server<br />by <span class="grad">talking to it</span>.</h1>
+      <p class="lede reveal">ServerMind is a self-hosted AI assistant that monitors and runs your Linux&nbsp;VPS — PM2, Redis, MySQL, Nginx, Caddy, disk, logs — all from one chat. Open-source, 2FA-secured, and it runs entirely on your box.</p>
+
+      <div class="install reveal" id="install">
+        <code class="install-cmd"><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code>
+        <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+          <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+      </div>
+      <p class="install-note reveal">Takes ~2 minutes. A setup wizard handles the rest.</p>
+    </div>
+
+    <!-- product preview -->
+    <div class="container preview reveal">
+      <div class="window">
+        <div class="window-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="window-title">servermind.dev</span>
+        </div>
+        <div class="window-body">
+          <aside class="mini-side">
+            <div class="mini-brand"><span class="mini-logo"></span> ServerMind</div>
+            <div class="mini-nav"><span class="mini-item on">Overview</span><span class="mini-item">Assistant</span></div>
+            <div class="mini-status"><span class="mini-dot"></span> All systems operational</div>
+          </aside>
+          <div class="mini-main">
+            <div class="mini-grid">
+              <div class="mini-card"><span class="mk-label">CPU Load</span><span class="mk-val mono" data-count="0.14" data-dec="2">0.00</span><span class="mk-bar"><i data-w="8"></i></span></div>
+              <div class="mini-card"><span class="mk-label">Memory</span><span class="mk-val mono" data-count="46" data-suffix="%">0%</span><span class="mk-bar"><i data-w="46"></i></span></div>
+              <div class="mini-card"><span class="mk-label">Disk</span><span class="mk-val mono" data-count="16" data-suffix="%">0%</span><span class="mk-bar"><i data-w="16"></i></span></div>
+              <div class="mini-card"><span class="mk-label">Uptime</span><span class="mk-val sm">12d 4h</span></div>
+            </div>
+            <div class="mini-chat">
+              <div class="mc-you">Is Redis healthy?</div>
+              <div class="mc-ai"><b>Yes — Redis is healthy.</b> PONG in 0.4ms, 72&nbsp;MB used, 14 clients connected, uptime 12 days. Nothing to worry about.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── trust marquee ─── -->
+  <section class="strip">
+    <div class="container"><p class="strip-head reveal">Monitors &amp; manages your whole stack</p></div>
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
+        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── story: the 2am incident ─── -->
+  <section class="section story" id="story">
+    <div class="container story-inner">
+      <div class="story-copy reveal">
+        <span class="eyebrow">The 2am test</span>
+        <h2>A service goes down.<br />You don't even reach for SSH.</h2>
+        <p>The old way: log in, tail the logs, grep, guess, restart, hope. The ServerMind way — you ask, and it investigates across your tools and tells you exactly what broke.</p>
+      </div>
+      <div class="story-chat reveal">
+        <div class="sc-window">
+          <div class="sc-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="sc-title">assistant</span></div>
+          <div class="sc-body" id="storyChat"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── features ─── -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Features</span>
+        <h2>Everything you'd SSH in for — just ask.</h2>
+        <p>Plain-English control over your whole stack, with a live dashboard and guardrails that keep it safe.</p>
+      </div>
+      <div class="grid">
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <h3>Chat your infrastructure</h3>
+          <p>“Why is nginx down?” · “Restart api-prod” · “How much disk is left?” It picks the right tools, runs them, and explains what it finds.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>
+          <h3>Live dashboard</h3>
+          <p>CPU, memory, disk, uptime, PM2 processes and service health — at a glance, with sparklines and a status pulse, auto-refreshing.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <h3>Safe by design</h3>
+          <p>A strict read-only command whitelist, no raw shell, and a server-enforced “arm” switch required before <em>any</em> change touches your box.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+          <h3>Bring your own AI</h3>
+          <p>Free Gemini (1,500 req/day), a Claude Code subscription, or any OpenAI-compatible API — Groq, OpenRouter, even local Ollama. No lock-in.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <h3>Locked down</h3>
+          <p>Password + TOTP 2FA, HttpOnly sessions, brute-force lockout, strict CSP. Runs entirely on your server — nothing leaves your box.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
+          <h3>One command to run</h3>
+          <p><code>curl | bash</code>, then a wizard sets up auth, your AI, domain and services. Self-hosted and fully open-source — fork it, audit it, own it.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── how it works ─── -->
+  <section class="section alt" id="how">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="eyebrow">How it works</span>
+        <h2>From zero to chatting in three steps.</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><span class="step-n">01</span><h3>Install</h3><p>Run one command on your VPS. It sets up Bun, PM2, and ServerMind automatically.</p></div>
+        <div class="step reveal"><span class="step-n">02</span><h3>Set up</h3><p>The wizard walks you through a password, a TOTP QR scan, and picking your AI backend.</p></div>
+        <div class="step reveal"><span class="step-n">03</span><h3>Chat</h3><p>Open your dashboard and ask your server anything. Arm mutations when you want to make changes.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── security ─── -->
+  <section class="section" id="security">
+    <div class="container split">
+      <div class="reveal">
+        <span class="eyebrow">Security</span>
+        <h2>Your server. Your keys.<br />Your data.</h2>
+        <p>ServerMind runs on your own machine. Your AI keys stay in your <code>.env</code>, your logs never leave the box, and every command the AI can run is a vetted, read-only-by-default tool — there's no raw shell to escape into.</p>
+        <ul class="checks">
+          <li>Argv-only execution — command injection is structurally impossible</li>
+          <li>Server-enforced “arm” gate before any restart or change</li>
+          <li>Password + TOTP 2FA, HttpOnly sessions, brute-force lockout</li>
+          <li>Strict Content-Security-Policy, fully self-hosted assets</li>
+        </ul>
+      </div>
+      <div class="code-card reveal">
+        <div class="code-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span> shell allowlist</div>
+        <pre><code><span class="c-c"># read-only by default — no rm, no writes, no network</span>
+<span class="c-g">$</span> df -h            <span class="c-ok">✓ allowed</span>
+<span class="c-g">$</span> systemctl status <span class="c-ok">✓ allowed</span>
+<span class="c-g">$</span> rm -rf /          <span class="c-no">✗ REJECTED</span>
+<span class="c-g">$</span> cat /etc/shadow   <span class="c-no">✗ REJECTED</span>
+
+<span class="c-c"># mutations need you to arm them first</span>
+<span class="c-g">$</span> pm2 restart api   <span class="c-warn">⚠ DISARMED — flip the switch</span></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── final CTA ─── -->
+  <section class="cta" id="ai">
+    <div class="glow glow-2"></div>
+    <div class="container cta-inner reveal">
+      <h2>Spin it up in two minutes.</h2>
+      <p>Self-hosted, open-source, and free with Gemini. Your server has never been this easy to talk to.</p>
+      <div class="install">
+        <code class="install-cmd"><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code>
+        <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+          <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+      </div>
+      <a class="btn btn-ghost lg" href="https://github.com/" target="_blank" rel="noopener">View on GitHub →</a>
+    </div>
+  </section>
+</main>
+
+<!-- ─── footer ─── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#security">Security</a>
+      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>
