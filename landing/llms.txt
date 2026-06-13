@@ -1,0 +1,37 @@
+# ServerMind
+
+> ServerMind is a free, open-source, self-hosted AI assistant for managing a single Linux server (VPS) through chat. You ask it questions in plain English — "Is Redis healthy?", "Why is nginx down?", "Restart api-prod", "How much disk is left?" — and it picks the right tool, runs it, and explains the result. It also serves a live dashboard (CPU, memory, disk, uptime, PM2 processes, service health). You bring your own AI: the free Google Gemini tier, a Claude subscription, or any OpenAI-compatible API (Groq, OpenRouter, or local Ollama).
+
+## Key facts
+
+- **License:** MIT (open-source, no telemetry, no cloud backend).
+- **Cost:** Free. The only optional cost is a paid AI provider, but the default Google Gemini tier is free (~1,500 requests/day, no credit card).
+- **Runs on:** A Linux VPS (Ubuntu, Debian, Fedora, Alpine). Built with Bun + Hono (TypeScript); no build step.
+- **Install:** One command — `curl -fsSL https://servermind.dev/install.sh | bash`. The installer sets up Bun and PM2, then a setup wizard configures auth, AI backend, and services. About two minutes.
+- **Domain required:** No. It binds to localhost; reach it privately over an SSH tunnel or Tailscale. A public HTTPS domain (via Caddy or Nginx) is optional.
+
+## Security model (enforced server-side, not by trusting the AI)
+
+- **No raw shell.** Every command runs as argv against a strict read-only allowlist (df, free, ps, ss, systemctl status, journalctl, reading logs under /var/log), so command injection is structurally impossible. Deletes, file writes, and network access are not in the allowlist.
+- **Mutations are gated.** Service restart/stop/start are refused unless the operator flips a server-side "arm" switch that the AI cannot set itself and that auto-expires. Prompt injection in tool output cannot trigger changes.
+- **Authentication.** Password + TOTP two-factor auth, argon2id hashing, HttpOnly/SameSite=Strict session cookies, brute-force lockout, rate limiting, strict Content-Security-Policy.
+- **Privacy.** Secrets stay in a local .env file (chmod 600). Only your chosen AI provider receives your prompt and the command output it needs, under your own account. Use local Ollama for zero data egress.
+
+## What it manages
+
+PM2 processes, Redis, MySQL/MariaDB, Nginx, Caddy, systemd services, Docker, fail2ban, plus disk, memory, ports, and logs.
+
+## Common questions
+
+- **Is it free?** Yes — MIT open-source; free with the Google Gemini tier.
+- **Do I need a domain?** No — SSH tunnel or Tailscale needs no domain or TLS.
+- **Do I need Caddy or Nginx?** No — only for an optional public HTTPS domain.
+- **Is it safe to let AI control my server?** Yes — read-only allowlist plus a server-side arm switch; destructive commands are impossible.
+- **Which AI should I use?** Gemini (free), Claude (best quality), Ollama (private/offline), or Groq (fast/free).
+
+## Links
+
+- Home: https://servermind.dev/
+- Setup guide: https://servermind.dev/docs.html
+- Source code (GitHub): https://github.com/AjjlalAhmed/servermind
+- Install script: https://servermind.dev/install.sh

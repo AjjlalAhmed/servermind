@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServerMind Setup Guide — Install on Your Linux Server</title>
+<meta name="description" content="How to install ServerMind on a Linux VPS: requirements, the one-command install, choosing your AI backend (Gemini, Claude, Ollama), accessing it with or without a domain, and troubleshooting." />
+<meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="Ajjlal Ahmed" />
+<link rel="canonical" href="https://servermind.dev/docs.html" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="article" />
+<meta property="og:title" content="ServerMind — Setup guide" />
+<meta property="og:description" content="Everything you need to install and run ServerMind on your Linux server. One command, no domain required." />
+<meta property="og:url" content="https://servermind.dev/docs.html" />
+<meta property="og:image" content="https://servermind.dev/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="ServerMind — manage your server by talking to it" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ServerMind — Setup guide" />
+<meta name="twitter:description" content="Everything you need to install and run ServerMind on your Linux server. One command, no domain required." />
+<meta name="twitter:image" content="https://servermind.dev/og.png" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="style.css" />
+
+<!-- Structured data: a how-to-shaped guide + breadcrumb for AI engines and rich results -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://servermind.dev/docs.html#article",
+      "headline": "ServerMind Setup Guide — Install on Your Linux Server",
+      "description": "How to install and configure ServerMind on a Linux VPS: requirements, one-command install, choosing your AI backend, accessing it with or without a domain, and troubleshooting.",
+      "url": "https://servermind.dev/docs.html",
+      "inLanguage": "en",
+      "about": { "@type": "SoftwareApplication", "name": "ServerMind", "url": "https://servermind.dev/" },
+      "author": { "@type": "Organization", "name": "ServerMind", "url": "https://servermind.dev/" },
+      "publisher": { "@type": "Organization", "name": "ServerMind", "url": "https://servermind.dev/", "logo": "https://servermind.dev/favicon.svg" }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://servermind.dev/docs.html#howto",
+      "name": "How to install ServerMind on a Linux server",
+      "description": "Install ServerMind with one command, configure it through the setup wizard, and reach it with or without a domain.",
+      "totalTime": "PT2M",
+      "tool": [{ "@type": "HowToTool", "name": "A Linux VPS with shell access" }, { "@type": "HowToTool", "name": "An AI key (free Google Gemini works)" }],
+      "step": [
+        { "@type": "HowToStep", "name": "Install", "text": "Run curl -fsSL https://servermind.dev/install.sh | bash on your VPS. It installs Bun and PM2, clones ServerMind, and starts it under PM2.", "url": "https://servermind.dev/docs.html#install" },
+        { "@type": "HowToStep", "name": "Choose your AI", "text": "In the setup wizard, pick a backend: free Google Gemini, a Claude subscription, an OpenAI-compatible API, or a local Ollama model.", "url": "https://servermind.dev/docs.html#ai" },
+        { "@type": "HowToStep", "name": "Access it", "text": "Reach the UI privately over an SSH tunnel or Tailscale with no domain, or front it with Caddy or Nginx for a public HTTPS domain.", "url": "https://servermind.dev/docs.html#access" }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://servermind.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Setup guide", "item": "https://servermind.dev/docs.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<!-- scroll progress -->
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<!-- ─── nav ─── -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="index.html#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ─── doc hero ─── -->
+  <section class="doc-hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container">
+      <span class="doc-eyebrow">Setup guide</span>
+      <h1 class="reveal">Install ServerMind on your server.</h1>
+      <p class="reveal">From a fresh VPS to chatting with your stack in about two minutes — including what you need, how to choose your AI, and how to reach it without a domain.</p>
+    </div>
+  </section>
+
+  <div class="container doc-layout">
+
+    <!-- ─── sticky table of contents ─── -->
+    <aside class="doc-toc" aria-label="On this page">
+      <span class="toc-h">On this page</span>
+      <a href="#requirements">What you need</a>
+      <a href="#install">Install</a>
+      <a href="#ai">Choose your AI</a>
+      <a href="#access">Accessing it</a>
+      <a href="#after">After install</a>
+      <a href="#security">Security model</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+    </aside>
+
+    <!-- ─── prose ─── -->
+    <article class="prose">
+
+      <!-- What you need -->
+      <section id="requirements" class="reveal">
+        <h2><span class="h2-no">01</span> What you need</h2>
+        <p class="lead">ServerMind is deliberately light. If you have a Linux box and can paste a command into it, you're set.</p>
+        <div class="req-grid">
+          <div class="card req">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+            <div><div class="rq-t">A Linux VPS</div><div class="rq-d">Ubuntu, Debian, Fedora, Alpine — any modern distro with systemd.</div></div>
+          </div>
+          <div class="card req">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6M12 19h8"/></svg></span>
+            <div><div class="rq-t">Shell access</div><div class="rq-d">SSH in as a normal user. Root works for the API backends, but not for Claude Code.</div></div>
+          </div>
+          <div class="card req">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span>
+            <div><div class="rq-t">An AI key</div><div class="rq-d">A free Gemini key, a Claude subscription, or any OpenAI-compatible key. Pick during setup.</div></div>
+          </div>
+          <div class="card req">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a2 2 0 0 1 2-2h2M16 3h2a2 2 0 0 1 2 2v2M20 17v2a2 2 0 0 1-2 2h-2M8 21H6a2 2 0 0 1-2-2v-2"/></svg></span>
+            <div><div class="rq-t">A little RAM</div><div class="rq-d">Runs comfortably on a small VPS. The installer adds Bun + PM2 automatically.</div></div>
+          </div>
+        </div>
+        <p>You do <strong>not</strong> need a domain name, a TLS certificate, or a reverse proxy to get started — see <a href="#access">Accessing it</a>.</p>
+      </section>
+
+      <!-- Install -->
+      <section id="install" class="reveal">
+        <h2><span class="h2-no">02</span> Install</h2>
+        <p class="lead">One command. It installs Bun and PM2, clones the repo, runs the setup wizard, and starts ServerMind under PM2.</p>
+        <div class="codeblock">
+          <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code></pre>
+          <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <div class="callout note"><span class="ct">Tip</span>If you'll use the <strong>Claude Code</strong> backend, install as a normal user — Claude Code refuses to run as root. The Gemini / OpenAI-compatible backends are fine either way.</div>
+
+        <h3>Prefer to do it by hand?</h3>
+        <div class="codeblock">
+          <pre><code><span class="prompt">$</span> git clone https://github.com/AjjlalAhmed/servermind.git &amp;&amp; cd servermind
+<span class="prompt">$</span> bun install
+<span class="prompt">$</span> bun run setup        <span class="cmt"># guided config → writes .env</span>
+<span class="prompt">$</span> bun run start        <span class="cmt"># or: pm2 start ecosystem.config.cjs</span></code></pre>
+          <button class="copy-btn" data-copy="git clone https://github.com/AjjlalAhmed/servermind.git && cd servermind&#10;bun install&#10;bun run setup&#10;bun run start" aria-label="Copy manual install commands">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+
+        <h3>The setup wizard</h3>
+        <p>Whichever way you install, <code>bun run setup</code> walks you through everything and writes it to <code>.env</code>. It's re-runnable anytime — it remembers your current values:</p>
+        <ul>
+          <li><strong>Admin password</strong> — hashed with argon2id.</li>
+          <li><strong>Two-factor (TOTP)</strong> — scan a QR with Google Authenticator / Authy / 1Password and confirm a code.</li>
+          <li><strong>AI backend</strong> — Claude Code or any OpenAI-compatible API, with a live connection test.</li>
+          <li><strong>Access &amp; networking</strong> — private (SSH/Tailscale) or a public HTTPS domain.</li>
+          <li><strong>PM2, monitored services, MySQL &amp; Redis</strong> — optional, each with a live probe.</li>
+        </ul>
+      </section>
+
+      <!-- Choose your AI -->
+      <section id="ai" class="reveal">
+        <h2><span class="h2-no">03</span> Choose your AI</h2>
+        <p class="lead">ServerMind brings no AI of its own — you point it at one. Pick a backend in the wizard, or set it in <code>.env</code>.</p>
+
+        <h3><span class="opt-row"><span>Google Gemini</span> <span class="tag free">free</span></span></h3>
+        <p>Around 1,500 requests a day with no credit card. Get a key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a>.</p>
+        <div class="codeblock"><pre><code>AI_BACKEND=openai
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-2.0-flash
+AI_API_KEY=&lt;your key&gt;</code></pre></div>
+
+        <h3><span class="opt-row"><span>Claude subscription</span> <span class="tag best">best quality</span></span></h3>
+        <p>Uses the locally-installed <code>claude</code> CLI with your subscription — no API key, no per-token billing. Install Claude Code and run <code>claude login</code> on the box first.</p>
+        <div class="codeblock"><pre><code>AI_BACKEND=claude-code</code></pre></div>
+
+        <h3>Other OpenAI-compatible APIs</h3>
+        <ul>
+          <li><strong>Groq</strong> — <code>https://api.groq.com/openai/v1</code> (free, very fast)</li>
+          <li><strong>OpenRouter</strong> — <code>https://openrouter.ai/api/v1</code></li>
+          <li><strong>Ollama</strong> — <code>http://127.0.0.1:11434/v1</code> (local, no key, nothing leaves the box)</li>
+        </ul>
+        <div class="callout note"><span class="ct">Privacy</span>With a cloud model, your prompts and the command output it needs go to that provider under <strong>your</strong> account. Want nothing to leave the server at all? Use local <strong>Ollama</strong>.</div>
+      </section>
+
+      <!-- Accessing it -->
+      <section id="access" class="reveal">
+        <h2><span class="h2-no">04</span> Accessing ServerMind</h2>
+        <p class="lead">It binds to <code>127.0.0.1:5500</code> and serves its own UI. A domain and reverse proxy are optional — choose how you'll reach it in the wizard.</p>
+
+        <h3>No domain (recommended to start)</h3>
+        <p>Reach it privately from your laptop — nothing is ever exposed to the internet:</p>
+        <div class="codeblock">
+          <pre><code><span class="cmt"># SSH tunnel — then open http://localhost:5500</span>
+<span class="prompt">$</span> ssh -L 5500:127.0.0.1:5500 user@your-server</code></pre>
+          <button class="copy-btn" data-copy="ssh -L 5500:127.0.0.1:5500 user@your-server" aria-label="Copy SSH tunnel command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <ul>
+          <li><strong>Tailscale</strong> — set <code>BIND_HOST</code> to the server's tailnet IP and reach it from any device on your tailnet.</li>
+          <li><strong>Cloudflare quick tunnel</strong> — a throwaway HTTPS URL with no domain owned: <code>cloudflared tunnel --url http://127.0.0.1:5500</code></li>
+        </ul>
+        <div class="callout note"><span class="ct">Why this is fine</span>Over an SSH tunnel or tailnet, plain HTTP is safe — your password and TOTP code never cross the open internet.</div>
+
+        <h3>Public domain over HTTPS</h3>
+        <p>Front it with a reverse proxy. The wizard detects Caddy or Nginx and prints a ready-to-paste config; set <code>SECURE_COOKIES=1</code> (it does this for you) so the session cookie is marked <code>Secure</code>.</p>
+        <div class="codeblock"><pre><code><span class="cmt"># Caddy — automatic HTTPS</span>
+servermind.example.com {
+    reverse_proxy 127.0.0.1:5500 {
+        flush_interval -1      <span class="cmt"># stream the chat (SSE) without buffering</span>
+    }
+}</code></pre></div>
+        <p>Nginx works too — use <code>proxy_pass</code> with <code>proxy_buffering off</code> and get a certificate with <code>certbot</code>.</p>
+        <div class="callout danger"><span class="ct">Don't</span>Don't set <code>BIND_HOST=0.0.0.0</code> and browse to <code>http://server-ip:5500</code> directly — that sends your credentials in cleartext. Use a tunnel, a tailnet, or HTTPS.</div>
+      </section>
+
+      <!-- After install -->
+      <section id="after" class="reveal">
+        <h2><span class="h2-no">05</span> After install</h2>
+        <ul>
+          <li><strong>Start on boot</strong> — run <code>pm2 startup</code> and execute the command it prints, then <code>pm2 save</code>.</li>
+          <li><strong>Logs</strong> — <code>pm2 logs servermind</code>.</li>
+          <li><strong>Reconfigure</strong> — <code>cd ~/servermind &amp;&amp; bun run setup</code> (or <code>bun run setup-auth</code> for just the password/2FA).</li>
+          <li><strong>Apply changes</strong> — <code>pm2 reload servermind</code>.</li>
+          <li><strong>Update</strong> — re-run the install command; it updates an existing install in place. (Your <code>.env</code> is never overwritten.)</li>
+        </ul>
+        <p>First login: open the UI, enter your password and the current 6-digit TOTP code. To make a change to your server, flip <strong>“Arm mutations”</strong> in the UI first — it auto-disarms after a few minutes.</p>
+      </section>
+
+      <!-- Security -->
+      <section id="security" class="reveal">
+        <h2><span class="h2-no">06</span> Security model</h2>
+        <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
+        <ul>
+          <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
+          <li><strong>Mutations gated.</strong> Restart/stop/start are refused unless you arm them via a server-side switch the model can't set itself — so prompt injection in tool output can't trigger changes.</li>
+          <li><strong>Auth.</strong> Password + TOTP 2FA, argon2id hashing, HttpOnly / SameSite=Strict cookies, brute-force lockout, rate limiting, strict CSP.</li>
+          <li><strong>Yours.</strong> Runs entirely on your box; secrets stay in a local <code>.env</code> (chmod 600); nothing is sent to the project's authors.</li>
+        </ul>
+        <div class="callout warn"><span class="ct">Maintainer note</span>If you use the Claude Code backend, pin the <code>claude</code> CLI version on the host rather than auto-upgrading — the built-in tool deny-list is matched to known versions. Found a gap? See the project's <a href="https://github.com/AjjlalAhmed/servermind/blob/main/SECURITY.md" target="_blank" rel="noopener">security policy</a>.</div>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section id="troubleshooting" class="reveal">
+        <h2><span class="h2-no">07</span> Troubleshooting</h2>
+
+        <h3>I can't open the dashboard</h3>
+        <p>It's bound to localhost by design. From your laptop, open an SSH tunnel (<a href="#access">above</a>) and visit <code>http://localhost:5500</code> — don't expect to hit the server's public IP directly.</p>
+
+        <h3>“auth not configured”</h3>
+        <p>The password/2FA wasn't set. Run <code>bun run setup-auth</code> on the server, then <code>pm2 reload servermind</code>.</p>
+
+        <h3>Claude Code: nothing happens / “refuses to run as root”</h3>
+        <p>Install Claude Code and run <code>claude login</code> as the same user that runs ServerMind, and don't run that user as root. Confirm the binary path with <code>which claude</code> and set <code>CLAUDE_BIN</code> if needed.</p>
+
+        <h3>The AI connection test failed</h3>
+        <p>Double-check <code>AI_BASE_URL</code>, <code>AI_MODEL</code>, and <code>AI_API_KEY</code> in <code>.env</code>. If your key contains a <code>$</code>, the env loader can mangle it — regenerate one without <code>$</code>.</p>
+
+        <h3>The dashboard shows no PM2 processes</h3>
+        <p>PM2 is per-user. If your apps run under a different user (e.g. root), set <code>PM2_COMMAND="sudo -n /root/.bun/bin/pm2"</code> and grant a passwordless sudo rule — the wizard prints the exact line.</p>
+
+        <h3>Login works locally but not behind Cloudflare/HTTPS</h3>
+        <p>Set <code>SECURE_COOKIES=1</code> so the session cookie is marked <code>Secure</code>, and make sure your proxy passes <code>X-Forwarded-Proto</code>. For streaming chat, disable response buffering (<code>flush_interval -1</code> in Caddy, <code>proxy_buffering off</code> in Nginx).</p>
+
+        <p style="margin-top:26px">Still stuck? Open an issue on <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>.</p>
+      </section>
+
+    </article>
+  </div>
+
+  <!-- ─── CTA ─── -->
+  <section class="cta">
+    <div class="glow glow-2" aria-hidden="true"></div>
+    <div class="container cta-inner reveal">
+      <h2>Ready in two minutes.</h2>
+      <p>Self-hosted, open-source, and free with Gemini. No domain required.</p>
+      <div class="install">
+        <code class="install-cmd"><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code>
+        <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+          <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+      </div>
+      <a class="btn btn-ghost lg" href="index.html">← Back to overview</a>
+    </div>
+  </section>
+</main>
+
+<!-- ─── footer ─── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="index.html#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script src="award.js" defer></script>
+</body>
+</html>

@@ -122,6 +122,35 @@ if (story && window.IntersectionObserver) {
   runStory(story);
 }
 
+/* ─── FAQ: single-open accordion (one answer at a time) ─── */
+const faqItems = $$(".faq-item");
+faqItems.forEach((item) => {
+  item.addEventListener("toggle", () => {
+    if (!item.open) return;
+    faqItems.forEach((other) => { if (other !== item) other.open = false; });
+  });
+});
+
+/* ─── Docs: scrollspy that lights the active TOC link ─── */
+(function () {
+  const toc = $(".doc-toc");
+  if (!toc || !window.IntersectionObserver) return;
+  const links = $$("a", toc);
+  const byId = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+  const sections = $$(".prose > section[id]");
+  const spy = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        links.forEach((a) => a.classList.remove("active"));
+        byId.get(e.target.id)?.classList.add("active");
+      });
+    },
+    { rootMargin: "-80px 0px -70% 0px", threshold: 0 },
+  );
+  sections.forEach((s) => spy.observe(s));
+})();
+
 /* ─── hero: Mindy watches the cursor and answers ─── */
 (function () {
   const mindy = $("#heroMindy");

@@ -8,7 +8,7 @@ take security seriously. Thanks for helping keep it safe.
 **Please do not open a public issue for security problems.**
 
 Instead, report privately via GitHub's **[Security Advisories](../../security/advisories/new)**
-(Security → Report a vulnerability), or email the maintainer. Include:
+(Security → Report a vulnerability), or email the maintainer ajjlalahemd48@gmail.com. Include:
 
 - what the issue is and its impact,
 - steps to reproduce (proof-of-concept if possible),

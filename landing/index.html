@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ServerMind — Manage your server by talking to it</title>
-<meta name="description" content="A self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — all from one chat. Bring your own AI: free Gemini or Claude." />
+<title>ServerMind — Manage your Linux server by talking to it</title>
+<meta name="description" content="ServerMind is a free, open-source, self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — from one chat. No domain required. Bring your own AI: free Gemini, Claude, or any OpenAI-compatible API." />
 <meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="Ajjlal Ahmed" />
+<meta name="application-name" content="ServerMind" />
+<link rel="canonical" href="https://servermind.dev/" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 
 <!-- Open Graph -->
@@ -13,11 +16,122 @@
 <meta property="og:title" content="ServerMind — Manage your server by talking to it" />
 <meta property="og:description" content="Self-hosted AI assistant for your Linux server. One command to install. Bring your own AI." />
 <meta property="og:url" content="https://servermind.dev" />
+<meta property="og:image" content="https://servermind.dev/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="ServerMind — manage your server by talking to it" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ServerMind — Manage your server by talking to it" />
+<meta name="twitter:description" content="Self-hosted AI assistant for your Linux server. One command to install. Bring your own AI." />
+<meta name="twitter:image" content="https://servermind.dev/og.png" />
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
 <link rel="stylesheet" href="style.css" />
+
+<!-- Structured data (SEO + AEO/GEO): entity definition for AI engines + FAQ extraction -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://servermind.dev/#software",
+      "name": "ServerMind",
+      "applicationCategory": "DeveloperApplication",
+      "applicationSubCategory": "Server management & DevOps assistant",
+      "operatingSystem": "Linux",
+      "description": "ServerMind is a free, open-source, self-hosted AI assistant for managing a Linux server through chat. It monitors and runs PM2, Redis, MySQL, Nginx, Caddy, disk, memory, ports and logs, with a live dashboard, behind password + TOTP 2FA. Bring your own AI: free Google Gemini, a Claude subscription, or any OpenAI-compatible API.",
+      "url": "https://servermind.dev/",
+      "downloadUrl": "https://servermind.dev/install.sh",
+      "softwareVersion": "1.0.0",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "Chat-based Linux server management in plain English",
+        "Live dashboard: CPU, memory, disk, uptime, PM2 processes and service health",
+        "Read-only command allowlist — no raw shell, command injection is structurally impossible",
+        "Server-side \"arm\" switch required before any restart, stop or start",
+        "Password + TOTP two-factor authentication, brute-force lockout, strict CSP",
+        "Bring your own AI: Google Gemini (free), Claude subscription, Groq, OpenRouter, or local Ollama",
+        "Access with no domain via SSH tunnel or Tailscale; optional HTTPS domain via Caddy or Nginx"
+      ],
+      "author": { "@id": "https://servermind.dev/#org" },
+      "publisher": { "@id": "https://servermind.dev/#org" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://servermind.dev/#org",
+      "name": "ServerMind",
+      "url": "https://servermind.dev/",
+      "logo": "https://servermind.dev/favicon.svg",
+      "sameAs": ["https://github.com/AjjlalAhmed/servermind"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://servermind.dev/#website",
+      "name": "ServerMind",
+      "url": "https://servermind.dev/",
+      "description": "Self-hosted AI assistant that manages your Linux server from one chat.",
+      "publisher": { "@id": "https://servermind.dev/#org" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://servermind.dev/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is ServerMind free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. ServerMind is free and open-source under the MIT license. The only optional cost is the AI backend you choose — the default Google Gemini tier is free (about 1,500 requests per day, no credit card), and you can also use a Claude subscription, a free Groq key, or a local Ollama model at no cost." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a domain name to run ServerMind?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. ServerMind binds to localhost and you reach it privately over an SSH tunnel or a Tailscale tailnet — no domain, DNS, or TLS configuration required. A public HTTPS domain is optional and only needed if you want to open it to the wider internet." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need Caddy or Nginx to use ServerMind?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. ServerMind serves its own web UI and runs on its own. A reverse proxy like Caddy or Nginx is only needed for a public HTTPS domain; the SSH tunnel and Tailscale access options require neither." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safe to let an AI control my server?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, by design. Every command runs against a strict read-only allowlist with no raw shell, so command injection is structurally impossible. Any change such as restart, stop or start is refused unless you arm it via a server-side switch the model cannot set itself, and arming auto-expires." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does my data leave my server?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Nothing is sent to ServerMind's authors; there is no cloud backend, and your secrets stay in a local .env file. Your prompt and the specific command output the model needs go only to your chosen AI provider under your own account. Use a local Ollama model if you want nothing to leave the machine." }
+        },
+        {
+          "@type": "Question",
+          "name": "What do I need to run ServerMind?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A Linux VPS (Ubuntu, Debian, Fedora or Alpine), shell access, and an AI key — the free Google Gemini tier works. The one-command installer sets up Bun and PM2 automatically." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can ServerMind break my server?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No destructive commands are possible — deletes, file writes, network access and arbitrary shell are not in the allowlist at all. The only changes it can make are service restart, stop and start, and only after you explicitly arm them. Read-only inspection is always safe." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which AI backend should I pick for ServerMind?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Use Google Gemini for a free and easy start, a Claude subscription for best quality (no API key — it uses the local claude CLI), a local Ollama model for privacy or offline use, or Groq for fast and free. You can switch anytime by re-running the setup wizard." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is ServerMind really open-source?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. ServerMind is MIT licensed with no telemetry. You can read every line of source on GitHub, audit the tool allowlist yourself, and fork it to change how it behaves." }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -45,7 +159,8 @@
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#security">Security</a>
-      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+      <a href="#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
     </nav>
     <div class="nav-cta">
       <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
@@ -306,6 +421,86 @@
     </div>
   </section>
 
+  <!-- ─── FAQ ─── -->
+  <section class="section alt" id="faq">
+    <div class="container">
+      <div class="chapter reveal"><span class="chapter-no">05</span><span class="chapter-line"></span><span class="chapter-tag">Questions</span></div>
+      <div class="sec-head reveal">
+        <h2>The questions you'd ask before trusting it.</h2>
+        <p>Straight answers on cost, access, and what an AI can actually do to your server.</p>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item reveal" open>
+          <summary>Is ServerMind free? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>The software is free and open-source (MIT) — fork it, audit it, self-host it. The only possible cost is the AI you point it at, and that's your choice.</p>
+            <p>The default free path is <strong>Google Gemini</strong> (~1,500 requests/day, no credit card). You can also use a <strong>Claude subscription</strong> you already pay for, a free <strong>Groq</strong> key, or a local <strong>Ollama</strong> model for zero ongoing cost. You only pay if you deliberately plug in a paid API.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Do I need a domain name? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>No. ServerMind binds to <code>localhost</code> on your server and you reach it privately — over an <strong>SSH tunnel</strong> (<code>ssh -L 5500:127.0.0.1:5500 user@server</code>) or a <strong>Tailscale</strong> tailnet. No domain, no DNS, no TLS to configure.</p>
+            <p>A public HTTPS domain is optional — only worth it if you want to open it to the wider internet. The <a href="docs.html#access">setup guide</a> covers all three.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Do I need Caddy or Nginx? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>No. ServerMind serves its own UI — it runs fine on its own. A reverse proxy like Caddy or Nginx is only needed if you want a public domain with HTTPS, and the setup wizard prints a ready-to-paste config when you do. For the SSH-tunnel or Tailscale path, you need neither.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Is it safe to let an AI control my server? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>Safety is enforced by the code, not by trusting the model. Every command runs against a strict <strong>read-only allowlist</strong> — there's no raw shell, no <code>rm</code>, no writes, no network — so command injection is structurally impossible.</p>
+            <p>Anything that changes your server (restart, stop, start) is refused unless you flip the server-side <strong>“arm” switch</strong> first, and that arming auto-expires. Even if the AI is tricked by a malicious log line, it can't act while disarmed.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Does my data leave my server? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>Nothing is ever sent to ServerMind's authors — there's no cloud backend. Your config and secrets live in a local <code>.env</code> (chmod 600) on your box.</p>
+            <p>The one exception is your chosen AI: when you ask a question, your prompt and the specific command output the model needs go to that provider (using <em>your</em> key, <em>your</em> account) — Google, Anthropic, etc. If you want absolutely nothing to leave the machine, point it at a local <strong>Ollama</strong> model.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>What do I need to run it? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>A <strong>Linux VPS</strong> (Ubuntu, Debian, Fedora, Alpine…), the ability to paste one command into its terminal, and an AI key (free Gemini works). The installer handles the rest — it sets up Bun and PM2 for you. It's light enough for a small VPS. Full list in the <a href="docs.html#requirements">requirements</a>.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Can it break my server? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>It can't run destructive commands — deletes, writes, and arbitrary shell aren't in the allowlist at all. The only changes it can make are service restart/stop/start, and only after you explicitly arm them. Read-only inspection (status, logs, disk, ports) is always safe and never touches anything.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Which AI backend should I pick? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p><strong>Free &amp; easy:</strong> Google Gemini. <strong>Best quality:</strong> a Claude subscription (no API key — uses the local <code>claude</code> CLI). <strong>Private/offline:</strong> local Ollama. <strong>Fast &amp; free:</strong> Groq. You can switch anytime by re-running <code>bun run setup</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Is it really open-source? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>Yes — MIT licensed, no telemetry, no walled garden. Read every line on <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>, audit the tool allowlist yourself, and fork it if you want to change how it behaves.</p>
+          </div>
+        </details>
+      </div>
+      <p class="faq-more reveal">Still have questions? The <a href="docs.html">full setup guide</a> walks through everything step by step.</p>
+    </div>
+  </section>
+
   <!-- ─── final CTA ─── -->
   <section class="cta" id="ai">
     <div class="glow glow-2"></div>
@@ -333,8 +528,9 @@
     </div>
     <div class="footer-links">
       <a href="#features">Features</a>
-      <a href="#how">How it works</a>
       <a href="#security">Security</a>
+      <a href="#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
       <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-meta">Open-source · Self-hosted · MIT</div>

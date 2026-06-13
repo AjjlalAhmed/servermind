@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<!-- Source for og.png (1200×630). Regenerate with:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+       --hide-scrollbars --force-device-scale-factor=2 --window-size=1200,630 \
+       --screenshot=og@2x.png --virtual-time-budget=2500 file://$PWD/og-source.html
+     (then downscale to 1200×630, or use scale 1 for exact spec size) -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<style>
+  :root{
+    --bg:#0B0A07; --surface:#120F0A; --border:rgba(255,255,255,.10);
+    --text:#EDEEF2; --dim:#A0A4AD; --faint:#565C66;
+    --accent:#F5A524; --accent2:#FBBF24;
+    --sans:"Geist Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono:"Geist Mono Variable",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:1200px;height:630px;overflow:hidden;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    position:relative; -webkit-font-smoothing:antialiased; letter-spacing:-.011em;
+  }
+  /* terminal grid */
+  .grid{position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:56px 56px;
+    -webkit-mask-image:radial-gradient(120% 95% at 38% 25%,#000 30%,transparent 78%);}
+  /* amber glow */
+  .glow{position:absolute; top:-180px; right:-120px; width:760px; height:680px;
+    background:radial-gradient(closest-side,rgba(245,165,36,.22),transparent 70%); filter:blur(20px);}
+  /* hairline frame */
+  .frame{position:absolute; inset:0; border:1px solid var(--border);}
+  .bar{position:absolute; left:0; right:0; bottom:0; height:6px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));}
+
+  .wrap{position:relative; height:100%; display:flex; align-items:center;
+    gap:40px; padding:0 76px;}
+  .copy{flex:1; min-width:0;}
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:34px;}
+  .brand svg{width:40px; height:40px;}
+  .brand b{font-size:25px; font-weight:600; letter-spacing:-.02em;}
+  h1{font-size:62px; font-weight:600; line-height:1.04; letter-spacing:-.035em; margin-bottom:26px;}
+  h1 .hl{color:var(--accent2); position:relative; white-space:nowrap;}
+  h1 .hl svg{position:absolute; left:-1%; bottom:-.16em; width:102%; height:.34em; overflow:visible;}
+  h1 .hl svg path{fill:none; stroke:var(--accent2); stroke-width:5; stroke-linecap:round; opacity:.9;}
+  .pill{display:inline-flex; align-items:center; gap:12px; background:var(--surface);
+    border:1px solid var(--border); border-radius:12px; padding:13px 18px; margin-bottom:30px;}
+  .pill .pr{color:var(--accent2); font-family:var(--mono); font-size:19px;}
+  .pill code{font-family:var(--mono); font-size:19px; color:var(--text); white-space:nowrap;}
+  .meta{display:flex; align-items:center; gap:14px; font-size:17px; color:var(--dim); font-family:var(--mono);}
+  .meta .dot{width:4px; height:4px; border-radius:50%; background:var(--faint);}
+
+  .mascot{flex:none; width:360px; display:grid; place-items:center; position:relative;}
+  .mascot .haze{position:absolute; width:420px; height:420px; border-radius:50%;
+    background:radial-gradient(closest-side,rgba(245,165,36,.20),transparent 70%);}
+  .mascot svg{position:relative; width:330px; height:auto; overflow:visible;
+    filter:drop-shadow(0 30px 60px rgba(245,165,36,.28));}
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+
+  <div class="wrap">
+    <div class="copy">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+        <b>ServerMind</b>
+      </div>
+      <h1>Manage your server by <span class="hl">talking to it<svg viewBox="0 0 240 16" preserveAspectRatio="none"><path d="M4 10 C 46 15, 92 4, 132 8 S 206 14, 236 6"/></svg></span>.</h1>
+      <div class="pill"><span class="pr">$</span><code>curl -fsSL https://servermind.dev/install.sh | bash</code></div>
+      <div class="meta">Open-source<span class="dot"></span>Self-hosted<span class="dot"></span>Free with Gemini</div>
+    </div>
+
+    <div class="mascot">
+      <div class="haze"></div>
+      <svg viewBox="0 0 260 240" role="img" aria-label="Mindy mascot">
+        <defs>
+          <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC15A"/><stop offset="1" stop-color="#F5A524"/></linearGradient>
+          <radialGradient id="mind" cx="50%" cy="42%" r="55%"><stop offset="0" stop-color="#FFEFC9" stop-opacity=".9"/><stop offset="60%" stop-color="#FBBF24" stop-opacity=".34"/><stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/></radialGradient>
+        </defs>
+        <ellipse cx="130" cy="214" rx="58" ry="11" fill="#000" opacity=".40"/>
+        <!-- body -->
+        <path d="M130 24 C178 24 206 64 206 126 C206 160 206 154 200 174 C192 179 192 188 180 188 C170 188 165 175 155 175 C145 175 142 188 130 188 C118 188 115 175 105 175 C95 175 90 188 80 188 C70 188 68 179 60 174 C54 154 54 160 54 126 C54 64 82 24 130 24 Z" fill="url(#body)" stroke="rgba(255,255,255,.10)" stroke-width="1.5"/>
+        <ellipse cx="104" cy="64" rx="24" ry="15" fill="#fff" opacity=".07"/>
+        <ellipse cx="130" cy="86" rx="50" ry="52" fill="url(#mind)"/>
+        <ellipse cx="96" cy="128" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+        <ellipse cx="164" cy="128" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+        <!-- eyes -->
+        <ellipse cx="108" cy="112" rx="15.5" ry="18" fill="#FFF7EA"/>
+        <ellipse cx="152" cy="112" rx="15.5" ry="18" fill="#FFF7EA"/>
+        <ellipse cx="110" cy="115" rx="7" ry="8" fill="#2A1D06"/>
+        <ellipse cx="154" cy="115" rx="7" ry="8" fill="#2A1D06"/>
+        <circle cx="106" cy="108" r="3" fill="#fff"/>
+        <circle cx="150" cy="108" r="3" fill="#fff"/>
+        <!-- smile -->
+        <path d="M120 137 Q130 145 140 137" fill="none" stroke="#FFF7EA" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        <!-- sparks -->
+        <circle cx="104" cy="14" r="2.6" fill="#FFEFC9"/>
+        <circle cx="130" cy="4" r="3" fill="#FFEFC9"/>
+        <circle cx="156" cy="16" r="2.2" fill="#FFEFC9"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="frame"></div>
+  <div class="bar"></div>
+</body>
+</html>
