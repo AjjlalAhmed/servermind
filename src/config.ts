@@ -90,10 +90,40 @@ export const config = {
   monitoredUnits: list("MONITORED_UNITS", ["nginx", "caddy", "mysql", "mariadb", "redis-server"]),
   // extra log roots read_log / cat may read, beyond the built-in safe roots.
   extraLogPaths: list("EXTRA_LOG_PATHS", []),
+
+  // ── Email reports & alerts (optional) ──────────────────────────────────────
+  // A background watcher emails a daily health report and fires alerts when
+  // disk/memory cross a threshold or a monitored service goes down. Sending is
+  // via SMTP (e.g. Gmail app password) or the Resend HTTP API — never a local
+  // mail server (deliverability + surface area). All set by `bun run setup`.
+  email: {
+    enabled: /^(1|true|yes)$/i.test(optional("EMAIL_ENABLED", "")),
+    method: optional("EMAIL_METHOD", "smtp"), // "smtp" | "resend"
+    to: optional("EMAIL_TO", ""),
+    from: optional("EMAIL_FROM", ""),
+    smtp: {
+      host: optional("SMTP_HOST", ""),
+      port: Number(optional("SMTP_PORT", "465")),
+      user: optional("SMTP_USER", ""),
+      pass: optional("SMTP_PASS", ""),
+    },
+    resendKey: optional("RESEND_API_KEY", ""),
+  },
+  alerts: {
+    diskPct: Number(optional("ALERT_DISK_PCT", "90")),
+    memPct: Number(optional("ALERT_MEM_PCT", "90")),
+    cooldownMin: Number(optional("ALERT_COOLDOWN_MIN", "60")),
+    // hour of day (server local time, 0-23) to send the daily report; -1 = off.
+    digestHour: optional("DIGEST_HOUR", "") === "" ? -1 : Number(optional("DIGEST_HOUR", "")),
+  },
 } as const;
 
 export function authConfigured(): boolean {
   return config.passwordHash !== "" && config.totpSecret !== "";
+}
+
+export function emailConfigured(): boolean {
+  return config.email.enabled && config.email.to !== "";
 }
 
 export type Config = typeof config;

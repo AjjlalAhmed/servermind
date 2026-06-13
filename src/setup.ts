@@ -7,6 +7,7 @@
 import QRCode from "qrcode";
 import { generateSecret, otpauthURL, verifyTotp } from "./auth/totp.ts";
 import { ask, confirm, choose, heading, note, ok, warn, color as C, readEnv, upsertEnv } from "./wizard/io.ts";
+import { smtpSend, resendSend } from "./notify/email.ts";
 
 // ── live tests ────────────────────────────────────────────────────────────────
 async function testAI(base: string, key: string, model: string): Promise<{ ok: boolean; msg?: string }> {
@@ -50,6 +51,21 @@ function testRedis(host: string, port: number): Promise<{ ok: boolean; msg?: str
       },
     }).catch((e) => { clearTimeout(timer); finish({ ok: false, msg: String(e) }); });
   });
+}
+
+async function testEmail(env: Record<string, string>): Promise<{ ok: boolean; msg?: string }> {
+  const subject = "ServerMind test email ✓";
+  const text = "This is a test from the ServerMind setup wizard.\nIf you got this, email reports & alerts are working.\n\n— ServerMind";
+  try {
+    if (env.EMAIL_METHOD === "resend") {
+      await resendSend(env.RESEND_API_KEY || "", { from: env.EMAIL_FROM || "ServerMind <onboarding@resend.dev>", to: env.EMAIL_TO || "", subject, text });
+    } else {
+      await smtpSend({ host: env.SMTP_HOST || "", port: Number(env.SMTP_PORT) || 465, user: env.SMTP_USER || "", pass: env.SMTP_PASS || "", from: env.EMAIL_FROM || env.SMTP_USER || "", to: env.EMAIL_TO || "", subject, text });
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, msg: (e as Error).message };
+  }
 }
 
 async function which(bin: string): Promise<string> {
@@ -337,6 +353,55 @@ async function main() {
     if (!t.ok) warn(t.msg || "connection failed");
   } else {
     note("Skipped.");
+  }
+
+  // ── 9. Email reports & alerts ──
+  heading("9 · Email reports & alerts (optional)");
+  note("Get a daily health report by email, plus alerts when disk/memory is high");
+  note("or a monitored service goes down. Sends via your Gmail/SMTP or Resend.");
+  if (await confirm("Enable email reports & alerts?", !!cur.get("EMAIL_ENABLED"))) {
+    env.EMAIL_ENABLED = "1";
+    env.EMAIL_TO = await ask("Send reports TO (your email address)", { def: cur.get("EMAIL_TO") || "" });
+
+    const method = await choose("How should it send mail?", [
+      "SMTP — Gmail or your own mail server",
+      "Resend — API key (simplest, best inbox delivery, free tier)",
+    ], cur.get("EMAIL_METHOD") === "resend" ? 1 : 0);
+
+    if (method === 1) {
+      env.EMAIL_METHOD = "resend";
+      note("Free key at https://resend.com . To send from your own domain, verify it there;");
+      note("for a quick test you can send From: 'ServerMind <onboarding@resend.dev>'.");
+      env.RESEND_API_KEY = (await ask("Resend API key (re_…)", { hidden: true, def: cur.get("RESEND_API_KEY") || "" })).trim();
+      env.EMAIL_FROM = await ask("From address", { def: cur.get("EMAIL_FROM") || "ServerMind <onboarding@resend.dev>" });
+    } else {
+      env.EMAIL_METHOD = "smtp";
+      note("Gmail: host smtp.gmail.com · port 465 · user = your full gmail · pass = an APP PASSWORD");
+      note("Create an app password at https://myaccount.google.com/apppasswords (NOT your login password).");
+      env.SMTP_HOST = await ask("SMTP host", { def: cur.get("SMTP_HOST") || "smtp.gmail.com" });
+      env.SMTP_PORT = await ask("SMTP port (use 465)", { def: cur.get("SMTP_PORT") || "465" });
+      env.SMTP_USER = await ask("SMTP username (full email)", { def: cur.get("SMTP_USER") || env.EMAIL_TO || "" });
+      env.SMTP_PASS = (await ask("SMTP password / app password", { hidden: true, def: cur.get("SMTP_PASS") || "" })).trim();
+      if (env.SMTP_PASS.includes("$")) warn("Password contains '$' which .env may mangle — app passwords normally don't.");
+      env.EMAIL_FROM = await ask("From address", { def: cur.get("EMAIL_FROM") || env.SMTP_USER });
+    }
+
+    // schedule + thresholds
+    const hour = await ask("Daily report hour, 0–23 server time (blank = alerts only)", { def: cur.get("DIGEST_HOUR") || "8" });
+    if (hour.trim() !== "") env.DIGEST_HOUR = String(Math.max(0, Math.min(23, Math.round(Number(hour)) || 0)));
+    env.ALERT_DISK_PCT = await ask("Alert when disk usage % is above", { def: cur.get("ALERT_DISK_PCT") || "90" });
+    env.ALERT_MEM_PCT = await ask("Alert when memory usage % is above", { def: cur.get("ALERT_MEM_PCT") || "90" });
+
+    if (await confirm("Send a test email now?", true)) {
+      process.stdout.write("  sending… ");
+      const t = await testEmail(env);
+      console.log(t.ok ? `${C.green}sent${C.reset}` : `${C.red}failed${C.reset}`);
+      if (t.ok) note(`Check ${env.EMAIL_TO} (and the spam folder the first time).`);
+      else warn(t.msg || "send failed — fix the EMAIL_*/SMTP_* values in .env, or re-run setup");
+    }
+  } else {
+    env.EMAIL_ENABLED = "";
+    note("Skipped. Enable it anytime with `bun run setup`.");
   }
 
   // ── write ──

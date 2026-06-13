@@ -13,6 +13,7 @@ import { rateLimit, acquireChatSlot, clientKey } from "./ratelimit.ts";
 import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
 import { isArmed, setArmed, armState } from "./arm.ts";
+import { startWatcher } from "./notify/watcher.ts";
 
 const MAX_MESSAGE_CHARS = 16_000;
 const MAX_BODY_BYTES = 256 * 1024;
@@ -227,4 +228,8 @@ const server = Bun.serve({
 
 console.log(`\n  ServerMind listening on http://${server.hostname}:${server.port}`);
 console.log(`  AI: ${backendLabel()}  |  2FA: ${authConfigured() ? "configured" : "NOT configured — run `bun run setup-auth`"}`);
-console.log(`  routes: /health /auth/login /status /chat\n`);
+console.log(`  routes: /health /auth/login /status /chat`);
+
+// Start the background email watcher (no-op unless email is configured).
+startWatcher();
+console.log("");
