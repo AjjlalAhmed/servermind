@@ -1,37 +1,40 @@
-/* ServerMind — Linear-inspired dark dashboard.
-   Aesthetic modeled on linear.app: near-black canvas, hairline borders,
-   indigo accent, sharp radii, no gradients, no shadows (bar the dot glow).
+/* ServerMind — warm dark dashboard, matched to the marketing site.
+   Same identity as servermind.dev: warm near-black canvas, hairline borders,
+   amber/gold accent, the Mindy daemon as the mark, sharp radii, restrained glow.
+   Amber is a light hue — text and glyphs sitting ON it use --on-accent, never white.
    All colors are CSS custom properties for easy theming. */
 
 :root {
-  /* canvas + surfaces */
-  --bg:           #08090A;   /* near-black, Linear's theme color */
-  --sidebar-bg:   #0D0E0F;
-  --surface:      #111213;   /* cards */
-  --surface-elev: #161718;   /* hover / active */
-  --surface-active: #1A1B1F; /* active nav row */
+  /* canvas + surfaces — warm-tinted, lifted straight from the landing page */
+  --bg:           #0B0A07;   /* warm near-black */
+  --sidebar-bg:   #100D09;
+  --surface:      #120F0A;   /* cards */
+  --surface-elev: #17130D;   /* hover / active */
+  --surface-active: #1C1710; /* active nav row */
   /* borders — hairline, almost invisible */
   --border:        rgba(255, 255, 255, 0.07);
   --border-faint:  rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.11);
   --track:         rgba(255, 255, 255, 0.06);
   /* text */
-  --text:         #E2E4E9;   /* primary */
-  --text-dim:     #9CA3AF;   /* values, buttons */
+  --text:         #EDEEF2;   /* primary */
+  --text-dim:     #A0A4AD;   /* values, buttons */
   --text-muted:   #6B7280;   /* muted */
-  --text-faint:   #4B5563;   /* labels, timestamps */
-  /* accent + semantics */
-  --accent:        #5E6AD2;  /* Linear indigo-purple */
-  --accent-hover:  #6B77E0;
-  --accent-soft:   rgba(94, 106, 210, 0.10);
-  --accent-border: rgba(94, 106, 210, 0.20);
+  --text-faint:   #565C66;   /* labels, timestamps */
+  /* accent + semantics — ServerMind amber */
+  --accent:        #F5A524;  /* ServerMind gold */
+  --accent-2:      #FBBF24;  /* brighter gold — emphasis text, glints */
+  --accent-hover:  #FFBC3E;
+  --accent-soft:   rgba(245, 165, 36, 0.12);
+  --accent-border: rgba(245, 165, 36, 0.30);
+  --on-accent:     #231905;  /* dark text/icons that sit on an amber fill */
   --green:         #4ADE80;
   --red:           #F87171;
   --amber:         #FBBF24;
   --green-soft:    rgba(74, 222, 128, 0.10);
   --green-border:  rgba(74, 222, 128, 0.20);
   --red-soft:      rgba(248, 113, 113, 0.10);
-  --user-msg-bg:   #1E1F2E;
+  --user-msg-bg:   #241B0C;  /* warm amber-tinted user bubble */
   /* type + shape — Geist (premium variable) with system / Inter fallbacks */
   --font-sans: "Geist Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -87,11 +90,11 @@ button { font-family: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
 .brand-logo {
-  width: 26px; height: 26px; border-radius: var(--radius-sm); flex-shrink: 0;
-  display: grid; place-items: center; color: #fff;
-  background: var(--accent);
+  width: 28px; height: 28px; flex-shrink: 0;
+  display: grid; place-items: center;
+  filter: drop-shadow(0 2px 10px rgba(245, 165, 36, 0.28));
 }
-.brand-logo svg { width: 15px; height: 15px; }
+.brand-logo svg { width: 28px; height: 28px; }
 .brand-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
 .brand-env { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
@@ -104,7 +107,7 @@ button { font-family: inherit; }
   transition: background 120ms ease, color 120ms ease;
 }
 .nav-item svg { width: 16px; height: 16px; opacity: .8; }
-.nav-item:hover { background: #131415; color: var(--text); }
+.nav-item:hover { background: #16120C; color: var(--text); }
 .nav-item.active {
   background: var(--surface-active); color: #fff;
   border-left-color: var(--accent);
@@ -283,7 +286,7 @@ button { font-family: inherit; }
 .body ul { margin: 10px 0; padding: 0; list-style: none; }
 .body li { margin: 6px 0; padding-left: 12px; border-left: 2px solid var(--accent); }
 .body code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-elev); padding: 1px 6px; border-radius: 5px; color: var(--accent); }
-.body pre { background: #0B0C0D; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 15px; overflow-x: auto; margin: 11px 0; }
+.body pre { background: #0C0A06; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 15px; overflow-x: auto; margin: 11px 0; }
 .body pre code { background: none; padding: 0; color: var(--text-dim); font-size: 12px; line-height: 1.6; }
 .body h1, .body h2, .body h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
 .body strong { color: var(--accent); font-weight: 600; }
@@ -312,7 +315,7 @@ button { font-family: inherit; }
 .tool.open .head .arrow { transform: rotate(90deg); }
 .tool .detail { display: none; border-top: 1px solid var(--border); }
 .tool.open .detail { display: block; }
-.tool pre { margin: 0; padding: 11px 13px; background: #0B0C0D; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+.tool pre { margin: 0; padding: 11px 13px; background: #0C0A06; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
 .tool .res { border-top: 1px dashed var(--border); }
 
 /* composer — fixed-feel bottom bar */
@@ -340,28 +343,28 @@ button { font-family: inherit; }
 #input::placeholder { color: var(--text-faint); }
 .send-btn {
   width: 32px; height: 32px; flex-shrink: 0; border: none; cursor: pointer;
-  border-radius: 50%; display: grid; place-items: center; color: #fff;
+  border-radius: 50%; display: grid; place-items: center; color: var(--on-accent);
   background: var(--accent); transition: background 120ms ease, transform 100ms ease;
 }
 .send-btn:hover { background: var(--accent-hover); }
 .send-btn:active { transform: scale(.94); }
 .send-btn svg { width: 14px; height: 14px; }
 .send-btn.stop { background: var(--surface-elev); color: var(--text); }
-.send-btn.stop:hover { background: #22232a; }
+.send-btn.stop:hover { background: #231D14; }
 
 /* ─── login modal ───────────────────────────────────────────────────────── */
 .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 5, 9, 0.7); }
 .modal-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 26px; }
 .modal-head { display: flex; align-items: center; gap: 11px; margin-bottom: 6px; }
-.modal-logo { width: 30px; height: 30px; border-radius: var(--radius-sm); display: grid; place-items: center; color: #fff; background: var(--accent); }
-.modal-logo svg { width: 16px; height: 16px; }
+.modal-logo { width: 32px; height: 32px; display: grid; place-items: center; filter: drop-shadow(0 2px 12px rgba(245, 165, 36, 0.3)); }
+.modal-logo svg { width: 32px; height: 32px; }
 .modal-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 .field { width: 100%; background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; transition: border-color 120ms ease; margin-bottom: 10px; }
 .field:focus { border-color: var(--accent-border); }
 .field::placeholder { color: var(--text-faint); }
 .field.code { text-align: center; letter-spacing: .5em; font-family: var(--font-mono); }
-.modal-btn { width: 100%; margin-top: 6px; padding: 10px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 120ms ease; }
+.modal-btn { width: 100%; margin-top: 6px; padding: 10px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 120ms ease; }
 .modal-btn:hover { background: var(--accent-hover); }
 .modal-err { min-height: 16px; margin-top: 10px; text-align: center; font-size: 12px; color: var(--red); }
 
