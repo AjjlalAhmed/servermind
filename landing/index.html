@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ServerMind — Manage your server by talking to it</title>
 <meta name="description" content="A self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — all from one chat. Bring your own AI: free Gemini or Claude." />
-<meta name="theme-color" content="#08090A" />
+<meta name="theme-color" content="#0B0A07" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
@@ -20,12 +21,23 @@
 </head>
 <body>
 
+<!-- scroll progress -->
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<!-- boot intro -->
+<div class="boot" id="boot" aria-hidden="true">
+  <div class="boot-stage">
+    <svg class="boot-ghost" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#FFC15A"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+    <pre class="boot-log" id="bootLog"></pre>
+  </div>
+</div>
+
 <!-- ─── nav ─── -->
 <header class="nav">
   <div class="container nav-inner">
     <a class="brand" href="#top">
       <span class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
       </span>
       ServerMind
     </a>
@@ -33,10 +45,10 @@
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#security">Security</a>
-      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
     </nav>
     <div class="nav-cta">
-      <a class="btn btn-ghost" href="https://github.com/" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
       <a class="btn btn-primary" href="#install">Get started</a>
     </div>
   </div>
@@ -46,26 +58,90 @@
 
   <!-- ─── hero ─── -->
   <section class="hero">
+    <div class="hero-grid-bg" aria-hidden="true"></div>
     <div class="glow"></div>
     <div class="container hero-inner">
-      <a class="pill reveal" href="#ai">
-        <span class="pill-dot"></span> Bring your own AI — free Gemini or Claude
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-      </a>
-      <h1 class="reveal">Manage your server<br />by <span class="grad">talking to it</span>.</h1>
-      <p class="lede reveal">ServerMind is a self-hosted AI assistant that monitors and runs your Linux&nbsp;VPS — PM2, Redis, MySQL, Nginx, Caddy, disk, logs — all from one chat. Open-source, 2FA-secured, and it runs entirely on your box.</p>
+      <div class="hero-copy">
+        <h1 class="reveal">Manage your server by <span class="ul">talking to it<svg class="ul-line" viewBox="0 0 240 16" preserveAspectRatio="none" aria-hidden="true"><path d="M4 10 C 46 15, 92 4, 132 8 S 206 14, 236 6"/></svg></span>.</h1>
+        <p class="lede reveal">ServerMind is a self-hosted assistant that watches and runs your Linux&nbsp;VPS — PM2, Redis, MySQL, Nginx, Caddy, disk, logs — from one chat. It lives on your box, behind 2FA, and you bring your own AI: free Gemini, a Claude subscription, or any OpenAI-compatible API.</p>
 
-      <div class="install reveal" id="install">
-        <code class="install-cmd"><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code>
-        <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
-          <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        </button>
+        <div class="install reveal" id="install">
+          <code class="install-cmd"><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code>
+          <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <p class="install-note reveal">~2 minutes to install · open-source · nothing leaves your server</p>
       </div>
-      <p class="install-note reveal">Takes ~2 minutes. A setup wizard handles the rest.</p>
+
+      <!-- Mindy: the daemon you talk to -->
+      <div class="hero-mindy reveal">
+        <div class="hm-panel">
+          <div class="hm-head">
+            <span class="hm-avatar"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+            <span class="hm-name">Mindy</span>
+            <span class="hm-role">your server's daemon</span>
+            <span class="hm-online"><i></i> online</span>
+          </div>
+        <div class="hm-stage" id="hmStage">
+          <svg class="hm-mindy" id="heroMindy" viewBox="0 0 260 280" role="img" aria-label="Mindy, the ServerMind mascot — a friendly glowing daemon that watches your server">
+            <defs>
+              <linearGradient id="hmBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC15A"/><stop offset="1" stop-color="#F5A524"/></linearGradient>
+              <radialGradient id="hmGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F5A524" stop-opacity=".5"/><stop offset="1" stop-color="#F5A524" stop-opacity="0"/></radialGradient>
+              <radialGradient id="hmMind" cx="50%" cy="42%" r="55%"><stop offset="0" stop-color="#FFEFC9" stop-opacity=".85"/><stop offset="60%" stop-color="#FBBF24" stop-opacity=".32"/><stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/></radialGradient>
+            </defs>
+            <!-- soft aura -->
+            <ellipse cx="130" cy="122" rx="108" ry="108" fill="url(#hmGlow)" opacity=".5"/>
+            <!-- ground shadow -->
+            <ellipse class="hm-shadow" cx="130" cy="246" rx="60" ry="11" fill="#000" opacity=".42"/>
+            <g class="hm-bob">
+              <!-- body: one smooth daemon silhouette -->
+              <path d="M130 46 C178 46 206 86 206 148 C206 182 206 176 200 196 C192 201 192 210 180 210 C170 210 165 197 155 197 C145 197 142 210 130 210 C118 210 115 197 105 197 C95 197 90 210 80 210 C70 210 68 201 60 196 C54 176 54 182 54 148 C54 86 82 46 130 46 Z" fill="url(#hmBody)" stroke="rgba(255,255,255,.10)" stroke-width="1.5"/>
+              <!-- soft top sheen -->
+              <ellipse cx="104" cy="86" rx="24" ry="15" fill="#fff" opacity=".07"/>
+              <!-- the mind: a glow from within -->
+              <g class="hm-orb"><ellipse cx="130" cy="108" rx="50" ry="52" fill="url(#hmMind)"/></g>
+              <!-- blush -->
+              <ellipse class="hm-blush" cx="96" cy="150" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+              <ellipse class="hm-blush" cx="164" cy="150" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+              <!-- eyes -->
+              <g class="hm-eyes">
+                <ellipse cx="108" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+                <ellipse cx="152" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+                <g class="hm-pupils" id="heroPupils">
+                  <ellipse cx="108" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+                  <ellipse cx="152" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+                  <circle cx="104" cy="130" r="3" fill="#fff"/>
+                  <circle cx="148" cy="130" r="3" fill="#fff"/>
+                  <circle cx="111" cy="142" r="1.4" fill="#fff" opacity=".8"/>
+                  <circle cx="155" cy="142" r="1.4" fill="#fff" opacity=".8"/>
+                </g>
+              </g>
+              <!-- smile -->
+              <path class="hm-smile" d="M120 159 Q130 167 140 159" fill="none" stroke="#FFF7EA" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+              <!-- thinking sparks -->
+              <g class="hm-sparks">
+                <circle cx="104" cy="36" r="2.6" fill="#FFEFC9"/>
+                <circle cx="130" cy="24" r="3" fill="#FFEFC9"/>
+                <circle cx="156" cy="38" r="2.2" fill="#FFEFC9"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <form class="hm-bar" id="hmBar" autocomplete="off">
+          <span class="hm-pr">$</span>
+          <input id="hmCmd" name="hmCmd" placeholder="Ask Mindy to check something…" aria-label="Ask Mindy" />
+          <button class="hm-send" type="submit" aria-label="Send to Mindy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14 0"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
+        </form>
+        <div class="hm-reply" id="hmReply"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- product preview -->
+    <!-- the actual dashboard -->
     <div class="container preview reveal">
       <div class="window">
         <div class="window-bar">
@@ -74,20 +150,21 @@
         </div>
         <div class="window-body">
           <aside class="mini-side">
-            <div class="mini-brand"><span class="mini-logo"></span> ServerMind</div>
+            <div class="mini-brand"><span class="mini-logo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span> ServerMind</div>
             <div class="mini-nav"><span class="mini-item on">Overview</span><span class="mini-item">Assistant</span></div>
             <div class="mini-status"><span class="mini-dot"></span> All systems operational</div>
           </aside>
           <div class="mini-main">
             <div class="mini-grid">
-              <div class="mini-card"><span class="mk-label">CPU Load</span><span class="mk-val mono" data-count="0.14" data-dec="2">0.00</span><span class="mk-bar"><i data-w="8"></i></span></div>
+              <div class="mini-card"><span class="mk-label">CPU load</span><span class="mk-val mono" data-count="0.14" data-dec="2">0.00</span><span class="mk-bar"><i data-w="8"></i></span></div>
               <div class="mini-card"><span class="mk-label">Memory</span><span class="mk-val mono" data-count="46" data-suffix="%">0%</span><span class="mk-bar"><i data-w="46"></i></span></div>
               <div class="mini-card"><span class="mk-label">Disk</span><span class="mk-val mono" data-count="16" data-suffix="%">0%</span><span class="mk-bar"><i data-w="16"></i></span></div>
               <div class="mini-card"><span class="mk-label">Uptime</span><span class="mk-val sm">12d 4h</span></div>
             </div>
-            <div class="mini-chat">
-              <div class="mc-you">Is Redis healthy?</div>
-              <div class="mc-ai"><b>Yes — Redis is healthy.</b> PONG in 0.4ms, 72&nbsp;MB used, 14 clients connected, uptime 12 days. Nothing to worry about.</div>
+            <div class="mini-procs">
+              <div class="mp-row"><span class="mp-name">api-prod</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 2% · 184&nbsp;MB · ↻ 0</span></div>
+              <div class="mp-row"><span class="mp-name">worker-queue</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 0% · 92&nbsp;MB · ↻ 0</span></div>
+              <div class="mp-row"><span class="mp-name">nginx.service</span><span class="mp-pill">active</span><span class="mp-meta mono">since 12d</span></div>
             </div>
           </div>
         </div>
@@ -106,86 +183,105 @@
     </div>
   </section>
 
+  <!-- ─── big statement ─── -->
+  <section class="statement">
+    <div class="container">
+      <p class="statement-text" id="statement">You don't <em>log into</em> your server anymore. You have a <em>conversation</em> with it.</p>
+    </div>
+  </section>
+
   <!-- ─── story: the 2am incident ─── -->
   <section class="section story" id="story">
-    <div class="container story-inner">
-      <div class="story-copy reveal">
-        <span class="eyebrow">The 2am test</span>
-        <h2>A service goes down.<br />You don't even reach for SSH.</h2>
-        <p>The old way: log in, tail the logs, grep, guess, restart, hope. The ServerMind way — you ask, and it investigates across your tools and tells you exactly what broke.</p>
-      </div>
-      <div class="story-chat reveal">
-        <div class="sc-window">
-          <div class="sc-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="sc-title">assistant</span></div>
-          <div class="sc-body" id="storyChat"></div>
+    <div class="container">
+      <div class="chapter reveal"><span class="chapter-no">01</span><span class="chapter-line"></span><span class="chapter-tag">The 2am test</span></div>
+      <div class="story-inner">
+        <div class="story-copy reveal">
+          <h2>A service goes down.<br />You don't even reach for SSH.</h2>
+          <p>The old way: log in, tail the logs, grep, guess, restart, hope. The ServerMind way — you ask, and it investigates across your tools and tells you exactly what broke.</p>
+        </div>
+        <div class="story-chat reveal">
+          <div class="sc-window">
+            <div class="sc-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="sc-title">assistant</span></div>
+            <div class="sc-body" id="storyChat"></div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─── features ─── -->
+  <!-- ─── features (bento) ─── -->
   <section class="section" id="features">
     <div class="container">
+      <div class="chapter reveal"><span class="chapter-no">02</span><span class="chapter-line"></span><span class="chapter-tag">Capabilities</span></div>
       <div class="sec-head reveal">
-        <span class="eyebrow">Features</span>
         <h2>Everything you'd SSH in for — just ask.</h2>
         <p>Plain-English control over your whole stack, with a live dashboard and guardrails that keep it safe.</p>
       </div>
-      <div class="grid">
-        <article class="card reveal">
+      <div class="bento">
+        <article class="card feat-lg reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <h3>Chat your infrastructure</h3>
-          <p>“Why is nginx down?” · “Restart api-prod” · “How much disk is left?” It picks the right tools, runs them, and explains what it finds.</p>
+          <p>Ask in plain English. It picks the right tools, runs them, and explains what it finds — no syntax to remember.</p>
+          <div class="feat-asks">
+            <span>Why is nginx down?</span>
+            <span>Restart api-prod</span>
+            <span>How much disk is left?</span>
+            <span>Tail the error log</span>
+          </div>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>
           <h3>Live dashboard</h3>
-          <p>CPU, memory, disk, uptime, PM2 processes and service health — at a glance, with sparklines and a status pulse, auto-refreshing.</p>
+          <p>CPU, memory, disk, uptime, PM2 processes and service health — at a glance, auto-refreshing.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
           <h3>Safe by design</h3>
-          <p>A strict read-only command whitelist, no raw shell, and a server-enforced “arm” switch required before <em>any</em> change touches your box.</p>
+          <p>A read-only command whitelist, no raw shell, and an “arm” switch required before <em>any</em> change touches your box.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
           <h3>Bring your own AI</h3>
-          <p>Free Gemini (1,500 req/day), a Claude Code subscription, or any OpenAI-compatible API — Groq, OpenRouter, even local Ollama. No lock-in.</p>
+          <p>Free Gemini, a Claude subscription, or any OpenAI-compatible API — Groq, OpenRouter, even local Ollama. No lock-in.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
           <h3>Locked down</h3>
-          <p>Password + TOTP 2FA, HttpOnly sessions, brute-force lockout, strict CSP. Runs entirely on your server — nothing leaves your box.</p>
+          <p>Password + TOTP 2FA, HttpOnly sessions, brute-force lockout, strict CSP. Nothing leaves your box.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
           <h3>One command to run</h3>
-          <p><code>curl | bash</code>, then a wizard sets up auth, your AI, domain and services. Self-hosted and fully open-source — fork it, audit it, own it.</p>
+          <p><code>curl | bash</code>, then a wizard handles auth, your AI, and services. Open-source — fork it, audit it, own it.</p>
         </article>
       </div>
     </div>
   </section>
 
-  <!-- ─── how it works ─── -->
+  <!-- ─── how it works (sticky split) ─── -->
   <section class="section alt" id="how">
     <div class="container">
-      <div class="sec-head reveal">
-        <span class="eyebrow">How it works</span>
+      <div class="chapter reveal"><span class="chapter-no">03</span><span class="chapter-line"></span><span class="chapter-tag">Setup</span></div>
+      <div class="how-grid">
+      <div class="how-aside">
         <h2>From zero to chatting in three steps.</h2>
+        <div class="how-rail" aria-hidden="true"><i id="howFill"></i></div>
       </div>
-      <div class="steps">
-        <div class="step reveal"><span class="step-n">01</span><h3>Install</h3><p>Run one command on your VPS. It sets up Bun, PM2, and ServerMind automatically.</p></div>
-        <div class="step reveal"><span class="step-n">02</span><h3>Set up</h3><p>The wizard walks you through a password, a TOTP QR scan, and picking your AI backend.</p></div>
-        <div class="step reveal"><span class="step-n">03</span><h3>Chat</h3><p>Open your dashboard and ask your server anything. Arm mutations when you want to make changes.</p></div>
+      <div class="how-steps">
+        <article class="how-step"><span class="how-n">01</span><h3>Install</h3><p>Run one command on your VPS. It sets up Bun, PM2, and ServerMind automatically — no manual config.</p></article>
+        <article class="how-step"><span class="how-n">02</span><h3>Set up</h3><p>A wizard walks you through a password, a TOTP QR scan, and picking your AI backend. Two minutes, start to finish.</p></article>
+        <article class="how-step"><span class="how-n">03</span><h3>Chat</h3><p>Open your dashboard and ask your server anything. Arm mutations when you actually want to change something.</p></article>
+      </div>
       </div>
     </div>
   </section>
 
   <!-- ─── security ─── -->
   <section class="section" id="security">
-    <div class="container split">
+    <div class="container">
+      <div class="chapter reveal"><span class="chapter-no">04</span><span class="chapter-line"></span><span class="chapter-tag">Security</span></div>
+      <div class="split">
       <div class="reveal">
-        <span class="eyebrow">Security</span>
         <h2>Your server. Your keys.<br />Your data.</h2>
         <p>ServerMind runs on your own machine. Your AI keys stay in your <code>.env</code>, your logs never leave the box, and every command the AI can run is a vetted, read-only-by-default tool — there's no raw shell to escape into.</p>
         <ul class="checks">
@@ -206,6 +302,7 @@
 <span class="c-c"># mutations need you to arm them first</span>
 <span class="c-g">$</span> pm2 restart api   <span class="c-warn">⚠ DISARMED — flip the switch</span></code></pre>
       </div>
+      </div>
     </div>
   </section>
 
@@ -222,7 +319,7 @@
           <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </button>
       </div>
-      <a class="btn btn-ghost lg" href="https://github.com/" target="_blank" rel="noopener">View on GitHub →</a>
+      <a class="btn btn-ghost lg" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">View on GitHub →</a>
     </div>
   </section>
 </main>
@@ -231,19 +328,20 @@
 <footer class="footer">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
       ServerMind
     </div>
     <div class="footer-links">
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#security">Security</a>
-      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-meta">Open-source · Self-hosted · MIT</div>
   </div>
 </footer>
 
 <script src="script.js" defer></script>
+<script src="award.js" defer></script>
 </body>
 </html>

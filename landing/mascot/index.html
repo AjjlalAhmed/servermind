@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mindy — the ServerMind mascot</title>
+<meta name="description" content="Mindy, the ServerMind mascot. A cute server buddy you talk to. Interactive SVG preview plus a Lottie export." />
+<meta name="theme-color" content="#0B0A07" />
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<style>
+  :root{
+    --bg:#0B0A07; --surface:#120F0A; --surface-2:#17130D;
+    --border:rgba(255,255,255,.07); --border-2:rgba(255,255,255,.11);
+    --text:#EDEEF2; --text-dim:#A0A4AD; --text-muted:#6B7280; --text-faint:#565C66;
+    --accent:#F5A524; --accent-2:#FBBF24; --accent-soft:rgba(245,165,36,.12); --accent-line:rgba(245,165,36,.30);
+    --green:#4ADE80;
+    --font-sans:"Geist Variable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --font-mono:"Geist Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--font-sans);
+    line-height:1.55;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:40px 24px 64px;
+    background-image:radial-gradient(900px 520px at 50% -8%,rgba(245,165,36,.10),transparent 70%);
+  }
+  .wrap{width:100%;max-width:640px}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent-2);display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:14px;
+  }
+  .eyebrow::before,.eyebrow::after{content:"";height:1px;width:34px;background:var(--accent-line)}
+  h1{font-size:clamp(30px,7vw,46px);font-weight:600;letter-spacing:-.03em;text-align:center;line-height:1.04}
+  h1 .by{color:var(--accent-2)}
+  .sub{color:var(--text-dim);text-align:center;font-size:16px;margin:14px auto 0;max-width:440px}
+
+  /* ─── the stage ─── */
+  .stage{
+    position:relative;margin:34px auto 0;width:100%;
+    aspect-ratio:1/.86;max-width:420px;
+    border:1px solid var(--border);border-radius:22px;
+    background:
+      radial-gradient(120% 90% at 50% 14%,rgba(245,165,36,.10),transparent 62%),
+      linear-gradient(180deg,#0C0D0F,#090A0B);
+    display:grid;place-items:center;overflow:hidden;
+    cursor:crosshair;
+  }
+  .stage::after{ /* subtle grid floor */
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:100% 34px;mask-image:linear-gradient(180deg,transparent 52%,#000 92%);
+    opacity:.7;
+  }
+  .mindy{width:74%;max-width:300px;height:auto;position:relative;z-index:2;overflow:visible}
+
+  /* ─── motion ─── */
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes shadowPulse{0%,100%{transform:scaleX(1);opacity:.42}50%{transform:scaleX(.87);opacity:.28}}
+  @keyframes orbPulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
+  @keyframes blink{0%,93%,100%{transform:scaleY(1)}96%,98%{transform:scaleY(.08)}}
+  @keyframes ponder{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+  @keyframes spark{0%{opacity:0;transform:translateY(5px) scale(.5)}50%{opacity:1;transform:translateY(-1px) scale(1)}100%{opacity:0;transform:translateY(-7px) scale(.5)}}
+
+  .g-bob{animation:bob 4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
+  .g-shadow{animation:shadowPulse 4s ease-in-out infinite;transform-origin:50% 50%;transform-box:fill-box}
+  .g-orb{animation:orbPulse 2.8s ease-in-out infinite;transform-origin:50% 50%;transform-box:fill-box}
+  .g-eyes{animation:blink 5.6s ease-in-out infinite;transform-origin:50% 42%;transform-box:fill-box}
+  .pupils{transition:transform .12s cubic-bezier(.2,.7,.3,1)}
+  .g-sparks{opacity:0;transition:opacity .25s}
+  .g-sparks circle{transform-box:fill-box;transform-origin:50% 50%}
+
+  /* thinking state */
+  .mindy.is-thinking{animation:ponder 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 92%}
+  .mindy.is-thinking .g-orb{animation-duration:1.1s}
+  .mindy.is-thinking .blush{opacity:.6}
+  .mindy.is-thinking .smile{d:path("M118 159 Q130 171 142 159")}
+  .mindy.is-thinking .g-sparks{opacity:1}
+  .mindy.is-thinking .g-sparks circle{animation:spark 1.3s ease-in-out infinite}
+  .mindy.is-thinking .g-sparks circle:nth-child(2){animation-delay:.25s}
+  .mindy.is-thinking .g-sparks circle:nth-child(3){animation-delay:.5s}
+
+  .blush{transition:opacity .3s}
+  .smile{transition:d .3s}
+
+  /* ─── talk panel ─── */
+  .talk{margin:26px auto 0;width:100%;max-width:420px}
+  .bar{
+    display:flex;align-items:center;gap:10px;height:50px;padding:0 8px 0 16px;
+    border:1px solid var(--border-2);border-radius:13px;background:var(--surface);
+    transition:border-color .2s,box-shadow .2s;
+  }
+  .bar:focus-within{border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft)}
+  .bar .pr{color:var(--accent-2);font-family:var(--font-mono);font-size:14px}
+  .bar input{
+    flex:1;background:none;border:0;outline:0;color:var(--text);
+    font-family:var(--font-mono);font-size:14px;letter-spacing:-.01em;min-width:0;
+  }
+  .bar input::placeholder{color:var(--text-faint)}
+  .send{
+    height:36px;width:36px;display:grid;place-items:center;flex:none;
+    background:var(--accent);color:#231905;border:0;border-radius:9px;cursor:pointer;transition:background .15s,transform .1s;
+  }
+  .send:hover{background:#FFBC3E}.send:active{transform:scale(.94)}
+  .send svg{width:16px;height:16px}
+
+  .reply{
+    margin-top:12px;min-height:22px;font-family:var(--font-mono);font-size:13px;
+    color:var(--text-dim);display:flex;align-items:center;gap:8px;
+    opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s;
+  }
+  .reply.show{opacity:1;transform:none}
+  .reply .ok{color:var(--green);font-weight:600}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;justify-content:center}
+  .chip{
+    font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border-2);border-radius:8px;padding:6px 11px;cursor:pointer;
+    background:transparent;transition:all .15s;
+  }
+  .chip:hover{border-color:var(--accent-line);color:var(--text);background:var(--accent-soft)}
+
+  /* ─── lottie export ─── */
+  .export{margin:52px auto 0;width:100%;max-width:560px;text-align:center}
+  .export h2{font-size:13px;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+  .lottie-box{
+    margin:18px auto 0;width:180px;height:180px;border:1px dashed var(--border-2);border-radius:18px;
+    display:grid;place-items:center;background:var(--surface);
+  }
+  #lottie{width:150px;height:150px}
+  .export p{color:var(--text-muted);font-size:13.5px;margin:16px auto 0;max-width:460px}
+  .export code{font-family:var(--font-mono);font-size:12.5px;color:var(--accent-2);background:var(--accent-soft);padding:2px 7px;border-radius:6px}
+  .foot{margin-top:46px;color:var(--text-faint);font-size:12.5px;font-family:var(--font-mono)}
+
+  @media (prefers-reduced-motion:reduce){
+    .g-bob,.g-shadow,.g-orb,.g-eyes,.mindy.is-thinking,.g-sparks circle{animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">ServerMind mascot</div>
+  <h1>Meet <span class="by">Mindy</span></h1>
+  <p class="sub">A daemon is the quiet background process that keeps a server running — so Mindy is one, given a face. Tell it what to do; it watches your cursor, thinks it over, and reports back.</p>
+
+  <!-- ─── interactive mascot ─── -->
+  <div class="stage" id="stage">
+    <svg class="mindy" id="mindy" viewBox="0 0 260 280" role="img" aria-label="Mindy, the ServerMind mascot — a friendly glowing daemon that watches your server">
+      <defs>
+        <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFC15A"/>
+          <stop offset="1" stop-color="#F5A524"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#F5A524" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#F5A524" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="mind" cx="50%" cy="42%" r="55%">
+          <stop offset="0" stop-color="#FFEFC9" stop-opacity=".85"/>
+          <stop offset="60%" stop-color="#FBBF24" stop-opacity=".32"/>
+          <stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- soft aura -->
+      <ellipse cx="130" cy="122" rx="108" ry="108" fill="url(#glow)" opacity=".5"/>
+
+      <!-- ground shadow -->
+      <ellipse class="g-shadow" cx="130" cy="246" rx="60" ry="11" fill="#000" opacity=".42"/>
+
+      <g class="g-bob">
+        <!-- body: one smooth daemon silhouette -->
+        <path d="M130 46 C178 46 206 86 206 148 C206 182 206 176 200 196 C192 201 192 210 180 210 C170 210 165 197 155 197 C145 197 142 210 130 210 C118 210 115 197 105 197 C95 197 90 210 80 210 C70 210 68 201 60 196 C54 176 54 182 54 148 C54 86 82 46 130 46 Z" fill="url(#body)" stroke="rgba(255,255,255,.10)" stroke-width="1.5"/>
+        <!-- soft top sheen -->
+        <ellipse cx="104" cy="86" rx="24" ry="15" fill="#fff" opacity=".07"/>
+
+        <!-- the mind: a glow from within -->
+        <g class="g-orb"><ellipse cx="130" cy="108" rx="50" ry="52" fill="url(#mind)"/></g>
+
+        <!-- blush -->
+        <ellipse class="blush" cx="96"  cy="150" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+        <ellipse class="blush" cx="164" cy="150" rx="8" ry="4.5" fill="#FFD58A" opacity=".35"/>
+
+        <!-- eyes -->
+        <g class="g-eyes">
+          <ellipse cx="108" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+          <ellipse cx="152" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+          <g class="pupils" id="pupils">
+            <ellipse cx="108" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+            <ellipse cx="152" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+            <circle cx="104" cy="130" r="3" fill="#fff"/>
+            <circle cx="148" cy="130" r="3" fill="#fff"/>
+            <circle cx="111" cy="142" r="1.4" fill="#fff" opacity=".8"/>
+            <circle cx="155" cy="142" r="1.4" fill="#fff" opacity=".8"/>
+          </g>
+        </g>
+
+        <!-- smile -->
+        <path class="smile" d="M120 159 Q130 167 140 159" fill="none" stroke="#FFF7EA" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+
+        <!-- thinking sparks -->
+        <g class="g-sparks">
+          <circle cx="104" cy="36" r="2.6" fill="#FFEFC9"/>
+          <circle cx="130" cy="24" r="3" fill="#FFEFC9"/>
+          <circle cx="156" cy="38" r="2.2" fill="#FFEFC9"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ─── talk to it ─── -->
+  <div class="talk">
+    <form class="bar" id="bar" autocomplete="off">
+      <span class="pr">$</span>
+      <input id="cmd" name="cmd" placeholder="Tell Mindy what to do…" aria-label="Command for Mindy" />
+      <button class="send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14 0"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </form>
+    <div class="reply" id="reply"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- ─── lottie export ─── -->
+  <section class="export">
+    <h2>Portable Lottie</h2>
+    <div class="lottie-box"><div id="lottie"></div></div>
+    <p>The same buddy as a looping <code>servermind-mascot.json</code> — drop it into LottieFiles, Webflow, Framer, or any <code>lottie-web</code> player.</p>
+  </section>
+
+  <p class="foot">drag your cursor over the stage · Mindy is watching</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+<script>
+(function(){
+  var mindy  = document.getElementById('mindy');
+  var stage  = document.getElementById('stage');
+  var pupils = document.getElementById('pupils');
+  var bar    = document.getElementById('bar');
+  var cmd    = document.getElementById('cmd');
+  var reply  = document.getElementById('reply');
+  var chips  = document.getElementById('chips');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* eyes track the cursor over the whole window */
+  var tx = 0, ty = 0, cx = 0, cy = 0;
+  function aim(e){
+    var r = mindy.getBoundingClientRect();
+    var ex = r.left + r.width*0.5, ey = r.top + r.height*0.47;
+    var dx = e.clientX - ex, dy = e.clientY - ey;
+    var d  = Math.hypot(dx,dy) || 1;
+    var max = 3.4;
+    tx = (dx/d) * Math.min(max, d/40);
+    ty = (dy/d) * Math.min(max, d/40);
+  }
+  window.addEventListener('pointermove', aim);
+  (function loop(){
+    cx += (tx-cx)*0.18; cy += (ty-cy)*0.18;
+    pupils.setAttribute('transform','translate('+cx.toFixed(2)+','+cy.toFixed(2)+')');
+    requestAnimationFrame(loop);
+  })();
+
+  /* the talk-to-it demo */
+  var demos = [
+    ['restart pm2 api',        '<span class="ok">✓</span> api restarted · 0 s downtime'],
+    ['why is redis slow?',     '<span class="ok">✓</span> evicting keys — maxmemory at 94%, raised to 1 GB'],
+    ['free up disk',           '<span class="ok">✓</span> cleared 2.3 GB of logs &amp; apt cache'],
+    ['tail nginx errors',      '<span class="ok">✓</span> 3 × 502 from :3000 — pm2 worker was down'],
+    ['is mysql healthy?',      '<span class="ok">✓</span> up 14 d · 38 conns · slow-query log clean'],
+  ];
+
+  function setThinking(on){ mindy.classList.toggle('is-thinking', on); }
+
+  function typeOut(text, done){
+    cmd.value=''; var i=0;
+    (function step(){
+      if(i<=text.length){ cmd.value=text.slice(0,i++); setTimeout(step, 38); }
+      else done();
+    })();
+  }
+  function run(text, answer){
+    reply.classList.remove('show');
+    typeOut(text, function(){
+      setThinking(true);
+      setTimeout(function(){
+        setThinking(false);
+        reply.innerHTML = answer || '<span class="ok">✓</span> done';
+        reply.classList.add('show');
+      }, 1150);
+    });
+  }
+
+  /* chips */
+  demos.forEach(function(d){
+    var b=document.createElement('button');
+    b.className='chip'; b.type='button'; b.textContent=d[0];
+    b.onclick=function(){ stopAuto(); run(d[0], d[1]); };
+    chips.appendChild(b);
+  });
+
+  /* real submissions */
+  bar.addEventListener('submit', function(e){
+    e.preventDefault(); stopAuto();
+    var t=cmd.value.trim(); if(!t) return;
+    var hit = demos.find(function(d){return d[0]===t;});
+    run(t, hit ? hit[1] : '<span class="ok">✓</span> on it — '+t);
+  });
+  cmd.addEventListener('focus', stopAuto);
+
+  /* autoplay loop until the user interrupts */
+  var auto=true, idx=0, timer;
+  function tick(){
+    if(!auto) return;
+    var d=demos[idx % demos.length]; idx++;
+    run(d[0], d[1]);
+    timer=setTimeout(tick, 4200);
+  }
+  function stopAuto(){ auto=false; clearTimeout(timer); }
+  if(!reduce) setTimeout(tick, 900);
+
+  /* Lottie export preview */
+  if(window.lottie){
+    lottie.loadAnimation({
+      container: document.getElementById('lottie'),
+      renderer:'svg', loop:true, autoplay:!reduce,
+      path:'servermind-mascot.json'
+    });
+  }
+})();
+</script>
+</body>
+</html>

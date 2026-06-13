@@ -37,12 +37,12 @@ curl -fsSL https://servermind.dev/install.sh | bash
 curl -fsSL https://servermind.dev/install.sh | bash
 ```
 The installer sets up Bun + PM2, clones the repo, runs the setup wizard, and
-starts ServerMind under PM2. Then put it behind HTTPS (e.g. Caddy
-`reverse_proxy 127.0.0.1:5500` with `flush_interval -1` for streaming).
+starts ServerMind under PM2. The wizard asks how you'll reach it and tailors the
+rest — see [Accessing ServerMind](#accessing-servermind).
 
 **Manual install**
 ```bash
-git clone https://github.com/YOUR-GITHUB/servermind.git && cd servermind
+git clone https://github.com/AjjlalAhmed/servermind.git && cd servermind
 bun install
 bun run setup        # guided config → writes .env (auth, AI backend, services)
 bun run start        # or: pm2 start ecosystem.config.cjs
@@ -66,6 +66,44 @@ Other OpenAI-compatible options: **Groq** (`api.groq.com/openai/v1`), **OpenRout
 AI_BACKEND=claude-code
 ```
 Requires Claude Code installed and logged in on the box.
+
+## Accessing ServerMind
+
+ServerMind binds to `127.0.0.1:5500` by default and serves its own UI — **a
+domain and a reverse proxy are optional.** The setup wizard asks how you'll
+reach it and configures the rest. You don't need Caddy or Nginx unless you want
+a public HTTPS domain.
+
+**No domain (recommended to start)** — keep it private, reach it from your
+laptop:
+
+```bash
+# SSH tunnel — nothing is ever exposed to the internet
+ssh -L 5500:127.0.0.1:5500 user@your-server   # then open http://localhost:5500
+```
+Or join it to a [Tailscale](https://tailscale.com) tailnet (set `BIND_HOST` to
+the server's tailnet IP), or spin up a throwaway HTTPS URL with no domain:
+`cloudflared tunnel --url http://127.0.0.1:5500`.
+
+Over an SSH tunnel or tailnet, plain HTTP is fine — your password and TOTP never
+cross the open internet.
+
+**Public domain over HTTPS** — front it with a reverse proxy (the wizard prints
+a ready-to-paste config and detects which one you have):
+
+```caddy
+servermind.example.com {
+    reverse_proxy 127.0.0.1:5500 {
+        flush_interval -1      # stream the chat (SSE) without buffering
+    }
+}
+```
+Nginx works too (`proxy_pass` + `proxy_buffering off`; get a cert with
+`certbot`). Set `SECURE_COOKIES=1` (the wizard does this automatically) so the
+session cookie is marked `Secure`.
+
+> **Don't** bind to `0.0.0.0` and browse to `http://server-ip:5500` directly —
+> that sends your credentials in cleartext. Use a tunnel, a tailnet, or HTTPS.
 
 ## Configuration
 

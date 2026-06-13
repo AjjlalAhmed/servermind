@@ -1,0 +1,25 @@
+name: CI
+
+# Runs on every push and PR: installs deps, typechecks, and runs the test
+# suite (TOTP, the run_shell allowlist, the mutation arm-gate, login lockout).
+# No secrets required — this is the public-repo quality gate. Deployment lives
+# in a separate, secret-gated workflow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Typecheck & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.4"
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test

@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-REPO="${SERVERMIND_REPO:-https://github.com/YOUR-GITHUB/servermind.git}"
+REPO="${SERVERMIND_REPO:-https://github.com/AjjlalAhmed/servermind.git}"
 DIR="${SERVERMIND_DIR:-$HOME/servermind}"
 
 # ── pretty output ──────────────────────────────────────────────────────────────
@@ -99,10 +99,21 @@ ok "Running under PM2"
 # ── done ───────────────────────────────────────────────────────────────────────
 PORT="$(grep -E '^PORT=' .env 2>/dev/null | cut -d= -f2 || true)"; PORT="${PORT:-5500}"
 HOST="$(grep -E '^BIND_HOST=' .env 2>/dev/null | cut -d= -f2 || true)"; HOST="${HOST:-127.0.0.1}"
+DOMAIN="$(grep -E '^SERVERMIND_DOMAIN=' .env 2>/dev/null | cut -d= -f2 || true)"
 printf "\n${G}${B}  ✓ ServerMind is running${N}  on  ${B}http://%s:%s${N}\n\n" "$HOST" "$PORT"
-info "Next steps:"
-info "  • Put it behind HTTPS with Caddy:  reverse_proxy 127.0.0.1:${PORT}  (flush_interval -1 for SSE)"
-info "  • Start on boot:                    pm2 startup   (then run the command it prints)"
-info "  • Logs:                             pm2 logs servermind"
-info "  • Reconfigure anytime:              cd $DIR && bun run setup"
+info "Reaching the UI:"
+if [ -n "$DOMAIN" ]; then
+  info "  • Once your reverse proxy is live:  https://${DOMAIN}"
+  info "  • Caddy snippet (auto-HTTPS):       reverse_proxy 127.0.0.1:${PORT}  (flush_interval -1 for SSE)"
+else
+  info "  • No domain? Tunnel from your laptop (nothing is exposed publicly):"
+  info "      ssh -L ${PORT}:127.0.0.1:${PORT} ${USER:-<user>}@<this-server>   →   http://localhost:${PORT}"
+  info "  • Or Tailscale (set BIND_HOST to the tailnet IP), or:  cloudflared tunnel --url http://127.0.0.1:${PORT}"
+  info "  • Want a public domain later? Re-run setup and pick the HTTPS option."
+fi
+info ""
+info "Also:"
+info "  • Start on boot:        pm2 startup   (then run the command it prints)"
+info "  • Logs:                 pm2 logs servermind"
+info "  • Reconfigure anytime:  cd $DIR && bun run setup"
 printf "\n"

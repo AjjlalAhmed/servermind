@@ -60,6 +60,44 @@ async function which(bin: string): Promise<string> {
   return "";
 }
 
+async function detectProxies(): Promise<{ caddy: string; nginx: string }> {
+  const [caddy, nginx] = await Promise.all([which("caddy"), which("nginx")]);
+  return { caddy, nginx };
+}
+
+// Ready-to-paste reverse-proxy snippets. Both disable response buffering so the
+// chat's Server-Sent-Events stream isn't held back, and pass X-Forwarded-Proto
+// so ServerMind marks the session cookie Secure (see auth/session.ts).
+function caddyBlock(domain: string, port: string): string {
+  return [
+    "",
+    `    ${domain} {`,
+    `        reverse_proxy 127.0.0.1:${port} {`,
+    `            flush_interval -1      # stream SSE (chat) without buffering`,
+    `        }`,
+    `    }`,
+    "",
+  ].join("\n");
+}
+
+function nginxBlock(domain: string, port: string): string {
+  return [
+    "",
+    `    server {`,
+    `        server_name ${domain};`,
+    `        location / {`,
+    `            proxy_pass http://127.0.0.1:${port};`,
+    `            proxy_http_version 1.1;`,
+    `            proxy_set_header Host $host;`,
+    `            proxy_set_header X-Forwarded-Proto $scheme;`,
+    `            proxy_buffering off;          # stream SSE (chat)`,
+    `            proxy_read_timeout 300s;`,
+    `        }`,
+    `    }`,
+    "",
+  ].join("\n");
+}
+
 // ── wizard ──────────────────────────────────────────────────────────────────
 async function main() {
   console.log(`\n${C.accent}${C.bold}  ServerMind setup${C.reset}`);
@@ -136,11 +174,55 @@ async function main() {
     }
   }
 
-  // ── 4. networking ──
-  heading("4 · Networking");
-  env.BIND_HOST = await ask("Bind host", { def: cur.get("BIND_HOST") || "127.0.0.1" });
-  env.PORT = await ask("Port", { def: cur.get("PORT") || "5500" });
-  env.SECURE_COOKIES = (await confirm("Served over HTTPS (behind Caddy/Cloudflare)?", true)) ? "1" : "";
+  // ── 4. access & networking ──
+  heading("4 · Access & networking");
+  note("ServerMind serves its own UI. You reach it either privately (no domain");
+  note("needed) or through a reverse proxy on a domain. Pick what fits you.");
+  const access = await choose("How will you reach the web UI?", [
+    "Private — SSH tunnel or Tailscale (no domain or TLS needed — recommended to start)",
+    "Public domain over HTTPS — behind Caddy or Nginx",
+  ], cur.get("SECURE_COOKIES") ? 1 : 0);
+
+  const port = await ask("Port", { def: cur.get("PORT") || "5500" });
+  env.PORT = port;
+
+  let domain = "";
+  if (access === 1) {
+    // Public domain: the proxy connects to ServerMind on localhost, and the
+    // session cookie should be marked Secure (we're terminating TLS up front).
+    env.BIND_HOST = "127.0.0.1";
+    env.SECURE_COOKIES = "1";
+    domain = await ask("Your domain (e.g. servermind.example.com)", { def: cur.get("SERVERMIND_DOMAIN") || "" });
+    if (domain) env.SERVERMIND_DOMAIN = domain;
+
+    const { caddy, nginx } = await detectProxies();
+    const d = domain || "your-domain.com";
+    if (caddy) {
+      ok("Caddy detected — it gets a TLS cert automatically.");
+      note("Add this to /etc/caddy/Caddyfile, then: sudo systemctl reload caddy");
+      console.log(`${C.dim}${caddyBlock(d, port)}${C.reset}`);
+    } else if (nginx) {
+      ok("Nginx detected.");
+      note("Add this server block, get a cert (sudo certbot --nginx), then: sudo nginx -s reload");
+      console.log(`${C.dim}${nginxBlock(d, port)}${C.reset}`);
+    } else {
+      warn("Neither Caddy nor Nginx is installed.");
+      note("ServerMind still runs fine without them — they only terminate HTTPS for a");
+      note("domain. Easiest path is Caddy (auto-HTTPS, one line of config):");
+      console.log(`    ${C.accent}# Debian/Ubuntu${C.reset} ${C.dim}sudo apt install -y caddy${C.reset}`);
+      console.log(`    ${C.dim}# others: https://caddyserver.com/docs/install${C.reset}`);
+      console.log(`${C.dim}${caddyBlock(d, port)}${C.reset}`);
+      note("No proxy and no domain? Skip this — use an SSH tunnel or Tailscale instead (shown below).");
+    }
+  } else {
+    // Private: stay on localhost (or a tailnet IP). Plain HTTP over an SSH
+    // tunnel / tailnet is fine — credentials never cross the open internet — so
+    // the cookie is left non-Secure to keep it working on http://localhost.
+    env.SECURE_COOKIES = "";
+    const host = await ask("Bind host", { def: cur.get("BIND_HOST") || "127.0.0.1" });
+    env.BIND_HOST = host;
+    note("Tip: set the bind host to this server's Tailscale IP to reach it across your tailnet.");
+  }
 
   // ── 5. PM2 ──
   heading("5 · PM2");
@@ -193,6 +275,21 @@ async function main() {
   await upsertEnv(env);
   heading("Done");
   ok(`Wrote ${Object.keys(env).length} settings to .env (chmod 600).`);
+
+  // How to actually open the UI, tailored to the access method chosen above.
+  console.log(`\n  ${C.bold}Reaching the UI:${C.reset}`);
+  if (access === 1 && domain) {
+    console.log(`    Once your reverse proxy is live:  ${C.accent}https://${domain}${C.reset}`);
+  } else if (access === 1) {
+    console.log(`    Through your reverse proxy, on the domain you point at 127.0.0.1:${port}.`);
+  } else {
+    console.log(`    From your laptop, tunnel over SSH (nothing is exposed publicly):`);
+    console.log(`      ${C.accent}ssh -L ${port}:127.0.0.1:${port} <user>@<this-server>${C.reset}`);
+    console.log(`    then open  ${C.accent}http://localhost:${port}${C.reset}`);
+    console.log(`    ${C.dim}Or: Tailscale (set BIND_HOST to the tailnet IP), or a quick tunnel:${C.reset}`);
+    console.log(`    ${C.dim}  cloudflared tunnel --url http://127.0.0.1:${port}${C.reset}`);
+  }
+
   console.log(`\n  Restart ServerMind to apply:\n    ${C.accent}pm2 reload servermind${C.reset}   ${C.dim}(or: bun run start)${C.reset}\n`);
   process.exit(0);
 }

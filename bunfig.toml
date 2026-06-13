@@ -1,0 +1,4 @@
+# Runs before any test module so config.ts sees configured auth secrets
+# (it reads them at import time and is cached for the whole process).
+[test]
+preload = ["./src/test-preload.ts"]

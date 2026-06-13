@@ -121,3 +121,60 @@ if (story && window.IntersectionObserver) {
 } else if (story) {
   runStory(story);
 }
+
+/* ─── hero: Mindy watches the cursor and answers ─── */
+(function () {
+  const mindy = $("#heroMindy");
+  if (!mindy) return;
+  const pupils = $("#heroPupils"), bar = $("#hmBar"), cmd = $("#hmCmd"), reply = $("#hmReply");
+
+  // eyes follow the pointer, eased
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+  addEventListener("pointermove", (e) => {
+    const r = mindy.getBoundingClientRect();
+    const ex = r.left + r.width * 0.5, ey = r.top + r.height * 0.47;
+    const dx = e.clientX - ex, dy = e.clientY - ey, d = Math.hypot(dx, dy) || 1, max = 3.4;
+    tx = (dx / d) * Math.min(max, d / 40);
+    ty = (dy / d) * Math.min(max, d / 40);
+  }, { passive: true });
+  (function loop() {
+    cx += (tx - cx) * 0.18; cy += (ty - cy) * 0.18;
+    pupils.setAttribute("transform", `translate(${cx.toFixed(2)},${cy.toFixed(2)})`);
+    requestAnimationFrame(loop);
+  })();
+
+  // the talk-to-it demo — real questions, real-shaped answers
+  const demos = [
+    ["restart pm2 api",   '<span class="ok">✓</span> api restarted · 0s downtime'],
+    ["why is redis slow?", '<span class="ok">✓</span> evicting keys — maxmemory at 94%, raised to 1&nbsp;GB'],
+    ["free up disk",       '<span class="ok">✓</span> cleared 2.3&nbsp;GB of logs &amp; apt cache'],
+    ["is mysql healthy?",  '<span class="ok">✓</span> up 14d · 38 conns · slow-query log clean'],
+  ];
+  const think = (on) => mindy.classList.toggle("is-thinking", on);
+  function type(t, done) {
+    cmd.value = ""; let i = 0;
+    (function step() {
+      if (i <= t.length) { cmd.value = t.slice(0, i++); setTimeout(step, 40); }
+      else done();
+    })();
+  }
+  function run(t, a) {
+    reply.classList.remove("show");
+    type(t, () => {
+      think(true);
+      setTimeout(() => { think(false); reply.innerHTML = a; reply.classList.add("show"); }, 1150);
+    });
+  }
+
+  let auto = !RM, idx = 0, timer;
+  const stop = () => { auto = false; clearTimeout(timer); };
+  function tick() { if (!auto) return; const d = demos[idx++ % demos.length]; run(d[0], d[1]); timer = setTimeout(tick, 4200); }
+  bar.addEventListener("submit", (e) => {
+    e.preventDefault(); stop();
+    const t = cmd.value.trim(); if (!t) return;
+    const hit = demos.find((d) => d[0] === t);
+    run(t, hit ? hit[1] : '<span class="ok">✓</span> on it — ' + t);
+  });
+  cmd.addEventListener("focus", stop);
+  if (auto) setTimeout(tick, 1100);
+})();
