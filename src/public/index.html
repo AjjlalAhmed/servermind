@@ -74,14 +74,16 @@
     <!-- ===== OVERVIEW ===== -->
     <section data-view="overview">
       <div class="overview">
+        <div id="statusHero"></div>
+
         <div class="metrics" id="kpis">
           <div class="metric-card"></div><div class="metric-card"></div><div class="metric-card"></div><div class="metric-card"></div>
         </div>
 
-        <div class="section-title">Services</div>
+        <div class="section-title" id="svcTitle">Services</div>
         <div class="services" id="healthGrid"></div>
 
-        <div class="section-title">PM2 Processes</div>
+        <div class="section-title" id="pm2Title">PM2 Processes</div>
         <div class="panel">
           <div class="table-scroll">
             <table class="pm2-table">

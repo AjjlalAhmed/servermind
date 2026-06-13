@@ -65,34 +65,68 @@ $("#logout").onclick = async () => { try { await fetch("/auth/logout", { method:
 function fmtBytes(n) { if (!n || n < 0) return "0 B"; const u = ["B", "KB", "MB", "GB", "TB"]; let i = Math.floor(Math.log(n) / Math.log(1024)); i = Math.min(i, u.length - 1); return (n / 1024 ** i).toFixed(i ? 1 : 0) + " " + u[i]; }
 function fmtUptime(ms) { if (!ms) return "—"; const s = Math.floor((Date.now() - ms) / 1000); const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`; }
 function tone(pct) { return pct >= 90 ? "bad" : pct >= 70 ? "warn" : "ok"; }
-function spark(vals, w = 120, h = 32) {
-  if (vals.length < 2) return `<svg width="${w}" height="${h}"></svg>`;
-  const max = Math.max(...vals), min = Math.min(...vals), rng = (max - min) || 1, step = w / (vals.length - 1);
-  const pts = vals.map((v, i) => `${(i * step).toFixed(1)},${(h - 2 - ((v - min) / rng) * (h - 4)).toFixed(1)}`).join(" ");
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+
+// Collapse a verbose "18 weeks, 5 days, 1 hour…" into the two largest units,
+// e.g. "18w 5d", so the Uptime card never wraps. Full string lives in the sub.
+function compactUptime(s) {
+  if (!s || s === "—") return { big: "—", full: "" };
+  const u = { week: "w", day: "d", hour: "h", minute: "m", min: "m", second: "s" };
+  const parts = []; let m; const re = /(\d+)\s*(week|day|hour|minute|min|second)s?/gi;
+  while ((m = re.exec(s))) parts.push(m[1] + (u[m[2].toLowerCase()] || ""));
+  return { big: parts.slice(0, 2).join(" ") || s, full: s };
 }
 
-function kpiCard(opts) {
-  return `<div class="metric-card" data-tone="${opts.tone || "accent"}">
-    <div class="metric-head">
-      <span class="metric-label">${opts.label}</span>
-      ${opts.sparkVals ? `<span class="metric-spark">${spark(opts.sparkVals)}</span>` : `<span class="metric-icon">${opts.icon || ""}</span>`}
-    </div>
-    <div class="metric-value mono">${opts.value}</div>
-    <div class="metric-sub mono">${opts.sub || ""}</div>
-    ${opts.pct != null ? `<div class="metric-bar"><span class="metric-bar-fill" style="width:${Math.min(opts.pct, 100)}%"></span></div>` : ""}
+// Area sparkline: a filled trend with a soft gradient under the line. Each call
+// mints a unique gradient id so multiple cards don't collide.
+let sparkSeq = 0;
+function spark(vals, w = 240, h = 52) {
+  if (!vals || vals.length < 2) return "";
+  const id = "spk" + (++sparkSeq);
+  const max = Math.max(...vals), min = Math.min(...vals), rng = (max - min) || 1, step = w / (vals.length - 1);
+  const pts = vals.map((v, i) => `${(i * step).toFixed(1)},${(h - 4 - ((v - min) / rng) * (h - 12)).toFixed(1)}`);
+  const line = pts.join(" ");
+  return `<svg class="spark-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="currentColor" stop-opacity=".26"/>
+      <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+    </linearGradient></defs>
+    <polygon points="0,${h} ${line} ${w},${h}" fill="url(#${id})"/>
+    <polyline points="${line}" fill="none" stroke="currentColor" stroke-width="1.75"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
+function kpiCard(o) {
+  const tone = o.tone || "accent";
+  let chart = "";
+  if (o.sparkVals && o.sparkVals.length > 1) chart = `<div class="metric-spark">${spark(o.sparkVals)}</div>`;
+  else if (o.gauge != null) chart = `<div class="metric-gauge${o.gaugeUp ? " up" : ""}"><i style="width:${Math.min(o.gauge, 100)}%"></i></div>`;
+  return `<div class="metric-card" data-tone="${tone}">
+    <div class="metric-top"><span class="metric-label">${o.label}</span><span class="metric-icon">${o.icon || ""}</span></div>
+    <div class="metric-value mono">${o.value}</div>
+    <div class="metric-sub mono">${o.sub || ""}</div>
+    <div class="metric-chart">${chart}</div>
   </div>`;
 }
+
+// metric glyphs (line icons, set in currentColor)
+const ICONS = {
+  cpu:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M20 9h2M20 14h2M2 9h2M2 14h2"/></svg>`,
+  mem:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8V6M12 8V6M17 8V6M7 18v-2M12 18v-2M17 18v-2"/></svg>`,
+  disk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></svg>`,
+  up:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>`,
+};
 
 // ─── skeleton loading ────────────────────────────────────────────────────────────
 function showSkeletons() {
   if (lastStatus) return;   // only before the first real payload — never flicker on refresh
+  $("#statusHero").innerHTML = `<div class="status-hero skeleton-card"><span class="sk sk-dot"></span><span class="sk sk-line" style="max-width:220px"></span></div>`;
   $("#kpis").innerHTML = Array.from({ length: 4 }, () => `
     <div class="metric-card skeleton-card">
-      <div class="metric-head"><span class="sk sk-label"></span><span class="sk sk-spark"></span></div>
+      <div class="metric-top"><span class="sk sk-label"></span><span class="sk sk-icon"></span></div>
       <span class="sk sk-value"></span>
       <span class="sk sk-sub"></span>
-      <span class="sk sk-bar"></span>
+      <span class="sk sk-chart"></span>
     </div>`).join("");
   $("#healthGrid").innerHTML = Array.from({ length: 6 }, () => `
     <div class="service-card skeleton-card"><span class="sk sk-dot"></span><span class="sk sk-line"></span></div>`).join("");
@@ -130,18 +164,19 @@ function renderDashboard(s) {
   if (cpuPct != null) { cpuHist.push(cpuPct); if (cpuHist.length > 40) cpuHist.shift(); }
   if (m.memory) { memHist.push(m.memory.usedPct); if (memHist.length > 40) memHist.shift(); }
 
-  // KPI cards
+  // KPI cards — CPU/Memory show a trend sparkline; Disk a usage gauge; Uptime a green "up" bar.
   const cards = [];
   if (m.cpu) {
-    cards.push(kpiCard({ label: "CPU Load", value: (m.cpu.load1 ?? 0).toFixed(2), sub: `${m.cpu.cores} cores · ${cpuPct ?? 0}%`, pct: cpuPct, tone: tone(cpuPct ?? 0), sparkVals: cpuHist.slice() }));
+    cards.push(kpiCard({ label: "CPU Load", value: (m.cpu.load1 ?? 0).toFixed(2), sub: `${m.cpu.cores} cores · ${cpuPct ?? 0}%`, tone: tone(cpuPct ?? 0), icon: ICONS.cpu, sparkVals: cpuHist.slice() }));
   }
   if (m.memory) {
-    cards.push(kpiCard({ label: "Memory", value: m.memory.usedPct + "%", sub: `${fmtBytes(m.memory.usedBytes)} / ${fmtBytes(m.memory.totalBytes)}`, pct: m.memory.usedPct, tone: tone(m.memory.usedPct), sparkVals: memHist.slice() }));
+    cards.push(kpiCard({ label: "Memory", value: m.memory.usedPct + "%", sub: `${fmtBytes(m.memory.usedBytes)} / ${fmtBytes(m.memory.totalBytes)}`, tone: tone(m.memory.usedPct), icon: ICONS.mem, sparkVals: memHist.slice() }));
   }
   if (m.disk) {
-    cards.push(kpiCard({ label: "Disk (" + (m.disk.mount || "/") + ")", value: m.disk.usedPct + "%", sub: `${fmtBytes(m.disk.usedBytes)} / ${fmtBytes(m.disk.sizeBytes)}`, pct: m.disk.usedPct, tone: tone(m.disk.usedPct), icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></svg>` }));
+    cards.push(kpiCard({ label: "Disk (" + (m.disk.mount || "/") + ")", value: m.disk.usedPct + "%", sub: `${fmtBytes(m.disk.usedBytes)} / ${fmtBytes(m.disk.sizeBytes)}`, tone: tone(m.disk.usedPct), icon: ICONS.disk, gauge: m.disk.usedPct }));
   }
-  cards.push(kpiCard({ label: "Uptime", value: (host.uptime || "—").replace(/^up\s*/, ""), sub: host.hostname || "", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>` }));
+  const ut = compactUptime((host.uptime || "—").replace(/^up\s*/, ""));
+  cards.push(kpiCard({ label: "Uptime", value: ut.big, sub: ut.full || host.hostname || "", icon: ICONS.up, gauge: 100, gaugeUp: true }));
   $("#kpis").innerHTML = cards.join("");
 
   // service health grid (tri-state: up / warn / down)
@@ -153,6 +188,37 @@ function renderDashboard(s) {
   if (s.redis) svc.push(["redis", s.redis.connected ? "up" : "down", s.redis.connected ? (s.redis.usedMemoryHuman || "connected") : "down"]);
   if (s.mysql) svc.push(["mysql", s.mysql.ok ? "up" : "down", s.mysql.ok ? "connected" : "down"]);
   if (s.pm2) { const n = Array.isArray(s.pm2.processes) ? s.pm2.processes.length : null; svc.push(["pm2", s.pm2.ok ? "up" : "down", s.pm2.ok ? (n != null ? n + " online" : "ok") : "down"]); }
+
+  // problems first: down, then warn, then healthy — so trouble lands top-left
+  const rank = { down: 0, warn: 1, up: 2 };
+  const downs = svc.filter(([, st]) => st === "down");
+  const warns = svc.filter(([, st]) => st === "warn");
+  svc.sort((a, b) => rank[a[1]] - rank[b[1]]);
+
+  // ── system status hero: the one-glance answer to "is my server OK?" ──
+  let hState = "ok", hTitle = "All systems operational",
+      hMeta = `${svc.length} service${svc.length !== 1 ? "s" : ""} monitored · ${host.hostname || "server"}`;
+  if (downs.length) {
+    hState = "down";
+    hTitle = downs.length === 1 ? "1 service needs attention" : `${downs.length} services need attention`;
+    hMeta = downs.map((d) => d[0]).join(", ") + " down · " + (host.hostname || "server");
+  } else if (warns.length) {
+    hState = "warn";
+    hTitle = "Operational with warnings";
+    hMeta = warns.map((w) => w[0]).join(", ") + " inactive · " + (host.hostname || "server");
+  }
+  const sides = [];
+  if (m.cpu) sides.push(`<span class="sh-stat"><b>${m.cpu.cores}</b> cores</span>`);
+  if (m.memory) sides.push(`<span class="sh-stat"><b>${fmtBytes(m.memory.totalBytes)}</b> RAM</span>`);
+  if (ut.big !== "—") sides.push(`<span class="sh-stat"><b>${ut.big}</b> uptime</span>`);
+  $("#statusHero").innerHTML = `<div class="status-hero" data-state="${hState}">
+    <span class="sh-dot"></span>
+    <div class="sh-text"><div class="sh-title">${esc(hTitle)}</div><div class="sh-meta">${esc(hMeta)}</div></div>
+    <div class="sh-side">${sides.join("")}<span class="sh-updated">Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
+  </div>`;
+
+  $("#svcTitle") && ($("#svcTitle").textContent = `Services · ${svc.length}`);
+
   $("#healthGrid").innerHTML = svc.map(([name, state, detail]) => `
     <div class="service-card ${state === "down" ? "down" : ""}">
       <span class="service-glow"><span class="service-dot ${state}"></span></span>
@@ -164,6 +230,7 @@ function renderDashboard(s) {
 
   // pm2 table
   const procs = Array.isArray(s.pm2 && s.pm2.processes) ? s.pm2.processes : [];
+  $("#pm2Title") && ($("#pm2Title").textContent = `PM2 Processes · ${procs.length}`);
   $("#pm2Body").innerHTML = procs.length ? procs.map((p) => {
     const online = p.status === "online";
     return `<tr>

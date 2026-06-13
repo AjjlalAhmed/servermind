@@ -184,33 +184,63 @@ button { font-family: inherit; }
 
 .overview { padding: 20px 20px 40px; max-width: 1240px; }
 
-/* metric cards */
+/* ── system status hero — the page's anchor: is my server OK? ── */
+.status-hero {
+  display: flex; align-items: center; gap: 14px;
+  padding: 15px 18px; margin-bottom: 18px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--green); border-radius: var(--radius);
+}
+.status-hero[data-state="warn"] { border-left-color: var(--amber); }
+.status-hero[data-state="down"] {
+  border-left-color: var(--red);
+  background: linear-gradient(90deg, rgba(248,113,113,.06), transparent 38%), var(--surface);
+}
+.sh-dot {
+  position: relative; flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 0 4px rgba(74,222,128,.12);
+}
+.status-hero[data-state="warn"] .sh-dot { background: var(--amber); box-shadow: 0 0 0 4px rgba(251,191,36,.12); }
+.status-hero[data-state="down"] .sh-dot { background: var(--red);   box-shadow: 0 0 0 4px rgba(248,113,113,.14); }
+.sh-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: sh-pulse 2.8s ease-out infinite; }
+@keyframes sh-pulse { 0% { transform: scale(1); opacity: .55; } 70% { transform: scale(2.6); opacity: 0; } 100% { opacity: 0; } }
+.sh-text { min-width: 0; }
+.sh-title { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.status-hero[data-state="down"] .sh-title { color: var(--red); }
+.sh-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-side { margin-left: auto; display: flex; align-items: center; gap: 22px; flex-shrink: 0; }
+.sh-stat { font-size: 12px; color: var(--text-faint); }
+.sh-stat b { font-family: var(--font-mono); font-weight: 600; color: var(--text-dim); }
+.sh-updated { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+
+/* ── metric cards — mini-charts (sparkline = trend, gauge = state) ── */
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .metric-card {
+  display: flex; flex-direction: column; min-height: 150px; overflow: hidden;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px;
-  transition: border-color 120ms ease;
+  border-radius: var(--radius); padding: 14px 16px 16px;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 .metric-card:hover { border-color: var(--border-strong); }
-.metric-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.metric-label {
-  font-size: 11px; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text-faint);
-}
-.metric-spark { color: var(--accent); opacity: .6; }
-.metric-spark svg { width: 60px; height: 24px; }
-.metric-icon { color: var(--text-muted); }
-.metric-icon svg { width: 16px; height: 16px; }
-.metric-value {
-  font-family: var(--font-sans);   /* Inter display numbers, beats .mono */
-  font-size: 28px; font-weight: 500; letter-spacing: -0.03em;
-  color: var(--text); margin-top: 10px; line-height: 1;
-}
-.metric-sub { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 7px; }
-.metric-bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; margin-top: 14px; }
-.metric-bar-fill { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width 500ms ease; }
-.metric-card[data-tone="warn"] .metric-bar-fill { background: var(--amber); }
-.metric-card[data-tone="bad"]  .metric-bar-fill { background: var(--red); }
+.metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metric-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+.metric-icon { color: var(--text-faint); transition: color 120ms ease; }
+.metric-icon svg { width: 15px; height: 15px; }
+.metric-card:hover .metric-icon { color: var(--text-muted); }
+.metric-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); margin-top: 12px; line-height: 1; }
+.metric-sub { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-top: 7px; }
+.metric-chart { margin-top: 14px; flex: 1; display: flex; align-items: flex-end; }
+/* area sparkline — bleeds to the card's bottom + side edges */
+.metric-spark { position: relative; width: calc(100% + 32px); margin: 0 -16px -16px; height: 52px; color: var(--accent); }
+.metric-spark .spark-svg { width: 100%; height: 100%; display: block; }
+.metric-card[data-tone="warn"] .metric-spark { color: var(--amber); }
+.metric-card[data-tone="bad"]  .metric-spark { color: var(--red); }
+/* usage gauge — disk fill / uptime "up" bar */
+.metric-gauge { width: 100%; height: 6px; border-radius: 999px; background: var(--track); overflow: hidden; margin-bottom: 4px; }
+.metric-gauge i { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width 600ms cubic-bezier(.22,1,.36,1); }
+.metric-card[data-tone="warn"] .metric-gauge i { background: var(--amber); }
+.metric-card[data-tone="bad"]  .metric-gauge i { background: var(--red); }
+.metric-gauge.up i { background: var(--green); }
 
 /* service health grid */
 .services { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
@@ -376,15 +406,16 @@ button { font-family: inherit; }
    Dimensions mirror the real content to avoid layout shift on swap. */
 .sk { display: block; background: var(--surface-elev); border-radius: 4px; animation: sk-pulse 1.6s ease-in-out infinite; }
 .sk-label { width: 64px;  height: 11px; }
-.sk-spark { width: 60px;  height: 24px; }
-.sk-value { width: 92px;  height: 28px; margin-top: 10px; }
-.sk-sub   { width: 112px; height: 12px; margin-top: 9px; }
-.sk-bar   { width: 100%;  height: 3px;  margin-top: 14px; border-radius: 2px; }
-.sk-dot   { width: 6px;   height: 6px;  border-radius: 50%; flex-shrink: 0; }
+.sk-icon  { width: 15px;  height: 15px; border-radius: 4px; }
+.sk-value { width: 84px;  height: 30px; margin-top: 12px; }
+.sk-sub   { width: 112px; height: 11px; margin-top: 9px; }
+.sk-chart { width: 100%;  height: 28px; margin-top: auto; border-radius: 4px; }
+.sk-dot   { width: 9px;   height: 9px;  border-radius: 50%; flex-shrink: 0; }
 .sk-line  { flex: 1; height: 12px; max-width: 120px; }
 .sk-pill  { display: inline-block; width: 62px; height: 18px; border-radius: 100px; }
 .sk-num   { display: inline-block; width: 38px; height: 12px; }
 .skeleton-card:hover { border-color: var(--border); }   /* no hover lift while loading */
+.status-hero.skeleton-card { border-left-color: var(--border); }
 @keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 
 /* ─── responsive ────────────────────────────────────────────────────────── */
@@ -396,6 +427,7 @@ button { font-family: inherit; }
   .sidebar.open { transform: translateX(0); }
   .hamburger { display: inline-flex; }
   .env-badge { display: none; }
+  .sh-side { display: none; }
 }
 @media (max-width: 560px) {
   .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -407,6 +439,7 @@ button { font-family: inherit; }
 /* ─── reduced motion ────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .service-dot.down::after { animation: none; opacity: 0; }
+  .sh-dot::after { animation: none; opacity: 0; }
   .sk { animation: none; opacity: .6; }
   .thinking span { animation: none; opacity: .7; }
   .cursor::after { animation: none; }
