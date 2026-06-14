@@ -179,7 +179,7 @@ button { font-family: inherit; }
 
 /* ─── overview ──────────────────────────────────────────────────────────── */
 [data-view] { flex: 1 1 auto; min-height: 0; }
-[data-view="overview"] { display: block; overflow-y: auto; }
+[data-view="overview"], [data-view="settings"] { display: block; overflow-y: auto; }
 [data-view="assistant"] { display: flex; flex-direction: column; }
 
 .overview { padding: 20px 20px 40px; max-width: 1240px; }
@@ -397,6 +397,10 @@ button { font-family: inherit; }
 .modal-btn { width: 100%; margin-top: 6px; padding: 10px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 120ms ease; }
 .modal-btn:hover { background: var(--accent-hover); }
 .modal-err { min-height: 16px; margin-top: 10px; text-align: center; font-size: 12px; color: var(--red); }
+
+/* Login is a full-screen page (opaque), not a dim overlay floating on the dashboard. */
+#gate { background: radial-gradient(900px 520px at 50% -12%, rgba(245, 165, 36, 0.10), transparent 70%), var(--bg); }
+#gate .modal-card { box-shadow: 0 30px 90px -40px rgba(245, 165, 36, 0.25); }
 
 @keyframes blink  { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes tdot   { 0%, 80%, 100% { transform: scale(.5); opacity: .35; } 40% { transform: scale(1); opacity: 1; } }

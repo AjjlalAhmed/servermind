@@ -6,8 +6,11 @@ let armed = false;
 let lastStatus = null;
 const cpuHist = [], memHist = [];   // rolling samples for sparklines
 
-// ─── view switching + mobile drawer ─────────────────────────────────────────────
+// ─── view switching + URL (hash) routing + mobile drawer ─────────────────────────
+const VIEWS = ["overview", "assistant", "settings"];
+const viewFromHash = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "overview"; };
 function showView(name) {
+  if (!VIEWS.includes(name)) name = "overview";
   document.querySelectorAll("[data-view]").forEach((v) => {
     const on = v.dataset.view === name;
     v.classList.toggle("hidden", !on);
@@ -15,11 +18,14 @@ function showView(name) {
   });
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
   $("#pageTitle").textContent = name === "assistant" ? "Assistant" : name === "settings" ? "Settings" : "Overview";
+  if (location.hash.slice(1) !== name) location.hash = name; // each view has its own URL: bookmarkable, back/forward works
   if (name === "assistant") setTimeout(() => input.focus(), 30);
   if (name === "settings") loadSettings();
   closeDrawer();
 }
 document.querySelectorAll("[data-nav]").forEach((n) => n.onclick = () => showView(n.dataset.nav));
+// Back/forward buttons and direct URLs change the view — but only when signed in.
+addEventListener("hashchange", () => { if (!$("#gate").classList.contains("flex")) showView(viewFromHash()); });
 function openDrawer() { $("#sidebar").classList.add("open"); $("#overlay").classList.remove("hidden"); }
 function closeDrawer() { $("#sidebar").classList.remove("open"); $("#overlay").classList.add("hidden"); }
 $("#hamburger").onclick = openDrawer;
@@ -53,7 +59,7 @@ async function connect() {
   $("#gateErr").textContent = "…";
   try {
     const r = await fetch("/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password, totp }) });
-    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); return; }
+    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); showView(viewFromHash()); return; }
     const data = await r.json().catch(() => ({}));
     if (r.status === 503) return showGate("Auth not set up — run `bun run setup-auth` on the server.");
     if (r.status === 429) return showGate(`Locked out — try again in ${data.retryAfterSec || 60}s.`);
@@ -387,7 +393,7 @@ showSkeletons();   // paint placeholders on first frame, before /auth/me resolve
 (async function boot() {
   try {
     const r = await fetch("/auth/me"); const me = await r.json();
-    if (me.authenticated) { armed = !!me.armed; renderArm(); loadStatus(); }
+    if (me.authenticated) { armed = !!me.armed; renderArm(); loadStatus(); showView(viewFromHash()); }
     else if (!me.configured) showGate("Auth not set up — run `bun run setup-auth` on the server.");
     else showGate("");
   } catch { showGate(""); }
