@@ -1,0 +1,91 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   animations.css — GSAP motion layer support styles
+   ----------------------------------------------------------------------------
+   This file does NOT define animations (GSAP does, in /animations/*.js). It
+   only:
+     1. Neutralizes the legacy CSS animations that GSAP now owns, so the two
+        systems never double-fire (scoped to html.sm-gsap, the flag set by the
+        inline boot script in index.html before the deferred scripts run).
+     2. Adds the few static styles GSAP needs (transform-origins, the typing
+        caret, the scrolled-nav blur).
+     3. Provides a failsafe: if the GSAP runtime never boots (e.g. the CDN is
+        blocked), html.sm-gsap-failed restores a fully visible, static page.
+
+   Legacy JS counterparts (reveal IO, count-up, marquee pause, how-step
+   activation, magnetic/tilt) are guarded off in script.js / award.js by the
+   same html.sm-gsap flag.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── While GSAP is in charge, silence the legacy CSS transitions/animations ── */
+html.sm-gsap:not(.sm-gsap-failed) .reveal {
+  /* GSAP writes inline opacity/transform; kill the CSS transition so it can't
+     fight the tween. The .reveal h2 clip-path wipe + .ul-line draw are LEFT
+     intact — GSAP re-adds the .in class to trigger them as a bonus flourish. */
+  transition: none;
+}
+
+/* The infinite badge marquee is now a GSAP tween on .marquee-track (x). */
+html.sm-gsap:not(.sm-gsap-failed) .marquee-track { animation: none; }
+html.sm-gsap:not(.sm-gsap-failed) .marquee:hover .marquee-track { animation-play-state: running; }
+
+/* Dashboard stat bars fill via GSAP scaleX (transform, not width — perf rule).
+   JS sets the final width inline once, then animates scaleX 0 → 1 from the left. */
+html.sm-gsap:not(.sm-gsap-failed) .mk-bar i {
+  transition: none;
+  transform-origin: left center;
+  will-change: transform;
+}
+
+/* ── Static styles GSAP relies on ── */
+
+/* Nav blur once scrolled past 80px (ScrollTrigger toggles .scrolled). */
+.nav.scrolled {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Blinking caret appended after the install command while it "types". */
+.install-cmd .type-caret {
+  display: inline-block;
+  color: var(--accent-2);
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+/* FAQ answers are height-animated by GSAP; it manages overflow during the tween. */
+html.sm-gsap:not(.sm-gsap-failed) .faq-item .faq-a { overflow: hidden; }
+
+/* Button lift is a GSAP transform tween — keep the CSS transition off transform
+   so the two don't double-ease (colour/border still transition via CSS). */
+html.sm-gsap:not(.sm-gsap-failed) .btn {
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+/* Nav-link underline wipe: ::after scaleX is driven by the --ul var GSAP tweens. */
+html.sm-gsap:not(.sm-gsap-failed) .nav-links a { position: relative; }
+html.sm-gsap:not(.sm-gsap-failed) .nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 1px;
+  background: var(--accent-2);
+  transform: scaleX(var(--ul, 0));
+  transform-origin: left center;
+}
+
+/* ── Failsafe: GSAP never booted → show a clean, static page ── */
+html.sm-gsap-failed .reveal {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+html.sm-gsap-failed .reveal h2 { clip-path: none !important; }
+html.sm-gsap-failed .mk-bar i { transform: none !important; }
+html.sm-gsap-failed .how-step { opacity: 1 !important; transform: none !important; }
+
+/* Reduced-motion users: GSAP renders final states with no movement, but make
+   sure nothing GSAP-specific is left mid-flight if a tween is skipped. */
+@media (prefers-reduced-motion: reduce) {
+  html.sm-gsap .reveal { opacity: 1; transform: none; }
+  html.sm-gsap .mk-bar i { transform: none; }
+}

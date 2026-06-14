@@ -12,10 +12,20 @@ import { getStatusSnapshot } from "./status.ts";
 import { rateLimit, acquireChatSlot, clientKey } from "./ratelimit.ts";
 import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
-import { localAgent } from "./agent.ts";
+import { localAgent, type Agent } from "./agent.ts";
 import { startWatcher } from "./notify/watcher.ts";
-import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket } from "./fleet/hub.ts";
-import { settingsForApi, updateSettings } from "./settings.ts";
+import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket, isAgentConnected, removeAgent } from "./fleet/hub.ts";
+import { RemoteAgent, isAgentArmed } from "./fleet/remote.ts";
+import { settingsForApi, updateSettings, getAI } from "./settings.ts";
+
+// Resolve which box a request targets: the local controller box by default, or a
+// connected remote agent by id. Returns an error marker if the agent is offline.
+function targetAgent(serverId: unknown): { agent: Agent } | { error: string; status: 409 } {
+  const id = typeof serverId === "string" ? serverId : "";
+  if (!id || id === "local") return { agent: localAgent };
+  if (!isAgentConnected(id)) return { error: "that server is offline", status: 409 };
+  return { agent: new RemoteAgent(id) };
+}
 import { sendEmail } from "./notify/email.ts";
 import { buildDigest } from "./notify/report.ts";
 
@@ -116,9 +126,11 @@ app.get("/auth/me", (c) =>
 // a client body flag, so one request can't both arm and trigger a mutation.
 app.use("/auth/arm", requireAuth);
 app.post("/auth/arm", async (c) => {
-  let body: { on?: boolean };
+  let body: { on?: boolean; server?: string };
   try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
-  return c.json(localAgent.setArmed(body.on === true));
+  const t = targetAgent(body.server); // arm the local box, or a selected remote agent
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  return c.json(t.agent.setArmed(body.on === true));
 });
 
 // Stricter limiter on login to slow credential stuffing (lockout is in login.ts).
@@ -163,7 +175,18 @@ app.get("/status", async (c) => {
 app.use("/fleet", requireAuth);
 app.get("/fleet", (c) => {
   const reg = fleetRegistry();
-  return c.json({ enabled: fleetEnabled(), servers: reg ? reg.list() : [] });
+  const servers = (reg ? reg.list() : []).map((s) => ({ ...s, armed: isAgentArmed(s.id) }));
+  // canChat = the controller's AI backend can drive a remote box (OpenAI-compatible).
+  return c.json({ enabled: fleetEnabled(), canChat: getAI().backend === "openai", servers });
+});
+
+app.use("/fleet/remove", requireAuth);
+app.post("/fleet/remove", async (c) => {
+  let body: { server?: string };
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
+  if (!body.server) return c.json({ error: "server is required" }, 400);
+  removeAgent(body.server);
+  return c.json({ ok: true });
 });
 
 // ─── Dashboard settings (authenticated; secrets masked in responses) ───────────
@@ -197,7 +220,7 @@ app.post("/settings/report-now", async (c) => {
 });
 
 app.post("/chat", async (c) => {
-  let body: { message?: string; history?: ChatMessage[] };
+  let body: { message?: string; history?: ChatMessage[]; server?: string };
   try {
     body = await c.req.json();
   } catch {
@@ -208,13 +231,25 @@ app.post("/chat", async (c) => {
   if (!message) return c.json({ error: "message is required" }, 400);
   if (message.length > MAX_MESSAGE_CHARS) return c.json({ error: "message too long" }, 413);
 
+  // Which box does this chat act on — local, or a selected remote agent?
+  const t = targetAgent(body.server);
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  const agent = t.agent;
+  // The Claude Code backend runs tools in a local MCP subprocess, so it can only
+  // act on this box. Remote-server chat needs an OpenAI-compatible backend.
+  if (agent !== localAgent && getAI().backend === "claude-code") {
+    return c.json({ error: "Remote-server chat needs an OpenAI-compatible AI backend on the controller (Claude Code runs locally only)." }, 400);
+  }
+
   const history = (Array.isArray(body.history) ? body.history : [])
     .slice(-40)
     .map((h) => ({ role: h?.role, content: String(h?.content ?? "").slice(0, MAX_MESSAGE_CHARS) }))
     .filter((h) => h.role === "user" || h.role === "assistant") as ChatMessage[];
 
-  // Mutations are gated by server-side arm state, NOT a client-supplied flag.
-  const allowMutations = localAgent.isArmed();
+  // Mutations are gated by the TARGET box's arm state, NOT a client-supplied flag.
+  const allowMutations = agent.isArmed();
+  // Fleet mode: chatting on the controller box with a fleet → expose fleet-wide tools.
+  const fleet = agent === localAgent && fleetEnabled();
 
   // Cap concurrent chats — each spawns a claude + MCP subprocess.
   const release = acquireChatSlot();
@@ -244,7 +279,7 @@ app.post("/chat", async (c) => {
     }, 15_000);
 
     try {
-      await runChat(message, history, (e) => enqueue(e.type, e), { allowMutations, signal: ac.signal });
+      await runChat(message, history, (e) => enqueue(e.type, e), { allowMutations, signal: ac.signal, agent, fleet });
     } catch (err) {
       if (!ac.signal.aborted) enqueue("error", { type: "error", message: (err as Error).message });
     } finally {

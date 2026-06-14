@@ -8,16 +8,24 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const fine  = matchMedia("(hover: hover) and (pointer: fine)").matches;
 
+  /* GSAP motion layer engaged → it owns the hero parallax, the magnetic/tilt
+     hover effects and the How-it-works step activation, so those stand down
+     here. The boot intro, scroll-progress bar, auto-hiding nav and the big
+     statement word-rise are GSAP-agnostic and keep running. */
+  const GSAP = document.documentElement.classList.contains("sm-gsap");
+
   /* ─── boot intro: type a short daemon boot log, then lift the curtain ─── */
   (function boot() {
     const el = $("#boot");
-    if (!el) return;
+    const booted = () => document.dispatchEvent(new Event("sm:booted")); // cue the GSAP hero entrance
+    if (!el) { booted(); return; }
     const finish = () => {
       el.classList.add("lift");
       document.body.classList.remove("booting");
+      booted();
       setTimeout(() => el.remove(), 850);
     };
-    if (RM || sessionStorage.getItem("sm-booted")) { el.remove(); return; }
+    if (RM || sessionStorage.getItem("sm-booted")) { el.remove(); booted(); return; }
     sessionStorage.setItem("sm-booted", "1");
     document.body.classList.add("booting");
 
@@ -81,8 +89,8 @@
     io.observe(el);
   })();
 
-  /* ─── parallax depth on scroll ─── */
-  if (!RM) {
+  /* ─── parallax depth on scroll (skip under GSAP — it scales these elements) ─── */
+  if (!RM && !GSAP) {
     const glow = $(".hero .glow"), win = $(".preview .window"), stage = $(".hm-stage");
     let ticking = false;
     function par() {
@@ -96,8 +104,8 @@
     par();
   }
 
-  /* ─── magnetic buttons ─── */
-  if (!RM && matchMedia("(hover: hover)").matches) {
+  /* ─── magnetic buttons + card tilt (GSAP owns hover micro-interactions) ─── */
+  if (!RM && !GSAP && matchMedia("(hover: hover)").matches) {
     $$(".btn-primary, .copy-btn, .hm-send").forEach((b) => {
       b.addEventListener("pointermove", (e) => {
         const r = b.getBoundingClientRect();
@@ -120,6 +128,7 @@
 
   /* ─── signature: activate How-it-works steps + fill the rail on scroll ─── */
   (function () {
+    if (GSAP) return; // GSAP pins the section and activates steps as you scrub
     const steps = $$(".how-step"), fill = $("#howFill");
     if (!steps.length || !window.IntersectionObserver) { steps.forEach((s) => s.classList.add("active")); return; }
     function update(cur) {

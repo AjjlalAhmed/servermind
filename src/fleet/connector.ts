@@ -3,7 +3,8 @@
 // opened on the agent's host.
 
 import { getStatusSnapshot } from "../status.ts";
-import { helloFrame, statusFrame } from "./protocol.ts";
+import { localAgent } from "../agent.ts";
+import { helloFrame, statusFrame, resultFrame, parseControllerMessage } from "./protocol.ts";
 
 export interface AgentOptions {
   controllerUrl: string; // ws(s)://controller/fleet/agent
@@ -40,6 +41,20 @@ export function startAgentConnector(opts: AgentOptions): { stop: () => void } {
       ws!.send(helloFrame({ token: opts.token, agentId: opts.agentId, hostname: opts.hostname, version: opts.version }));
       void pushStatus();
       timer = setInterval(() => void pushStatus(), intervalMs);
+    });
+
+    // Controller commands. The agent runs them through its OWN localAgent, so
+    // the read-only allowlist + arm switch are enforced here — never bypassed.
+    ws.addEventListener("message", (ev) => {
+      const cmd = parseControllerMessage(typeof ev.data === "string" ? ev.data : String(ev.data));
+      if (!cmd) return;
+      if (cmd.type === "arm") { localAgent.setArmed(cmd.on); return; }
+      if (cmd.type === "invoke") {
+        // allowMutations comes from THIS box's arm state — not the controller's word.
+        localAgent.invoke(cmd.name, cmd.input, localAgent.isArmed())
+          .then((r) => ws?.readyState === WebSocket.OPEN && ws.send(resultFrame(cmd.reqId, r.content, r.isError)))
+          .catch((e) => ws?.readyState === WebSocket.OPEN && ws.send(resultFrame(cmd.reqId, `tool error: ${(e as Error).message}`, true)));
+      }
     });
 
     const cleanup = () => { if (timer) { clearInterval(timer); timer = null; } };

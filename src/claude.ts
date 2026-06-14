@@ -102,6 +102,13 @@ export interface ChatOptions {
   // Aborts the run and kills the claude process — fired when the client
   // disconnects (e.g. the user hits Stop in the UI).
   signal?: AbortSignal;
+  // Which box the chat acts on. Omitted = the local box (LocalAgent). The OpenAI
+  // backend honors this to target a remote agent; the Claude Code backend runs
+  // locally only (see the /chat guard).
+  agent?: import("./agent.ts").Agent;
+  // Fleet mode: the chat is on the controller with a fleet, so expose fleet-wide
+  // tools (list all servers / run on a named server). OpenAI backend only.
+  fleet?: boolean;
 }
 
 export async function runChat(

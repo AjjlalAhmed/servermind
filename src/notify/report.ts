@@ -41,6 +41,38 @@ export function evaluateAlerts(s: StatusSnapshot): Alert[] {
   return out;
 }
 
+// A single digest covering the whole fleet — the controller's own box plus every
+// connected agent, one line each, with a fleet-wide issue count.
+export function buildFleetDigest(
+  controller: StatusSnapshot,
+  agents: Array<{ hostname: string; online: boolean; status: StatusSnapshot | null }>,
+): { subject: string; body: string } {
+  let issues = 0;
+  const line = (name: string, online: boolean, s: StatusSnapshot | null): string => {
+    if (!online) { issues++; return `  ✗ ${name} — OFFLINE`; }
+    if (!s) return `  • ${name} — no data yet`;
+    const n = evaluateAlerts(s).length;
+    issues += n;
+    return `  ${n ? "⚠" : "✓"} ${name} — disk ${s.metrics.disk.usedPct}%, mem ${s.metrics.memory.usedPct}%, load ${s.metrics.cpu.load1}${n ? ` (${n} issue${n > 1 ? "s" : ""})` : ""}`;
+  };
+
+  const L: string[] = [];
+  L.push("ServerMind fleet report");
+  L.push(new Date().toISOString());
+  L.push("");
+  L.push(line(`${controller.host.hostname || "controller"} (controller)`, true, controller));
+  for (const ag of agents) L.push(line(ag.hostname, ag.online, ag.status));
+  L.push("");
+  L.push(issues ? `⚠️  ${issues} issue(s) across ${agents.length + 1} server(s).` : `✓  All ${agents.length + 1} servers healthy.`);
+  L.push("");
+  L.push("— ServerMind");
+
+  return {
+    subject: `ServerMind fleet: ${agents.length + 1} servers — ${issues ? `${issues} issue(s)` : "all good"}`,
+    body: L.join("\n"),
+  };
+}
+
 export function buildDigest(s: StatusSnapshot): { subject: string; body: string } {
   const host = s.host.hostname || "server";
   const alerts = evaluateAlerts(s);

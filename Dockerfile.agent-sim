@@ -1,0 +1,19 @@
+# Sim AGENT image — a "real-looking" server for the local fleet sim: it has a
+# MySQL client (for the MySQL probe), Node + PM2 (for the PM2 panel, with demo
+# processes), and procps. NOT for production — real agents run natively on hosts.
+FROM oven/bun:1.3.4
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      procps default-mysql-client nodejs npm \
+  && npm install -g pm2 \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+COPY . .
+COPY docker/agent-sim-entry.sh /agent-sim-entry.sh
+RUN chmod +x /agent-sim-entry.sh
+
+ENV NODE_ENV=production
+CMD ["/agent-sim-entry.sh"]

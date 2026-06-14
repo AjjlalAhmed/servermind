@@ -130,6 +130,7 @@
       <a href="#access">Accessing it</a>
       <a href="#after">After install</a>
       <a href="#email">Email reports & alerts</a>
+      <a href="#fleet">Multiple servers</a>
       <a href="#uninstall">Uninstall</a>
       <a href="#security">Security model</a>
       <a href="#troubleshooting">Troubleshooting</a>
@@ -297,9 +298,36 @@ servermind.example.com {
         <div class="callout note"><span class="ct">No mail server needed</span>ServerMind relays through your provider — it does <strong>not</strong> run its own mail server. That keeps deliverability high (VPS IPs are usually blacklisted) and the attack surface small.</div>
       </section>
 
+      <!-- Multiple servers (fleet) -->
+      <section id="fleet" class="reveal">
+        <h2><span class="h2-no">07</span> Multiple servers (fleet)</h2>
+        <p class="lead">A single server needs none of this — it works on its own, zero config. When you want to watch and manage several servers from one place, turn one instance into a <strong>controller</strong> and have the others connect to it as <strong>agents</strong>.</p>
+        <p>Agents dial <em>out</em> to the controller over one WebSocket, so you don't open any new inbound ports on them. Every server keeps enforcing its <strong>own</strong> read-only allowlist and arm switch — the controller can ask a server to do something, but it can't bypass that server's guardrails.</p>
+
+        <h3>1 · Turn one server into the controller</h3>
+        <p>On the server you'll log in to, set a shared join token (any long random string) in its <code>~/servermind/.env</code> and reload. This switches on the agent hub at <code>/fleet/agent</code> and reveals the <strong>Fleet</strong> tab in the dashboard.</p>
+        <div class="codeblock"><pre><code><span class="prompt">$</span> openssl rand -hex 32          <span class="cmt"># generate a token, paste it below</span>
+<span class="prompt">$</span> echo 'FLEET_JOIN_TOKEN=&lt;paste-token&gt;' &gt;&gt; ~/servermind/.env
+<span class="prompt">$</span> pm2 reload servermind</code></pre></div>
+
+        <h3>2 · Connect each other server as an agent</h3>
+        <p>Install ServerMind normally on each additional box, then point it at the controller with the <em>same</em> token and run the agent process under PM2:</p>
+        <div class="codeblock"><pre><code><span class="prompt">$</span> cd ~/servermind
+<span class="prompt">$</span> echo 'SERVERMIND_CONTROLLER=wss://controller-host:5500/fleet/agent' &gt;&gt; .env
+<span class="prompt">$</span> echo 'FLEET_JOIN_TOKEN=&lt;same-token&gt;' &gt;&gt; .env
+<span class="prompt">$</span> pm2 start "bun run agent" --name servermind-agent &amp;&amp; pm2 save</code></pre></div>
+        <p>Use <code>wss://</code> when the controller is behind HTTPS (a domain via Caddy/Nginx), or <code>ws://</code> over a private network or Tailscale tailnet. The agent reconnects on its own if the controller restarts.</p>
+
+        <h3>3 · See your fleet</h3>
+        <p>Open the controller's dashboard and click <strong>Fleet</strong> — every connected server appears with live CPU, memory, disk, and its Redis / MySQL / PM2 health. "Manage" a server to chat with just that box; reports and alerts from all of them arrive deduped in one inbox.</p>
+
+        <div class="callout note"><span class="ct">Fleet-wide chat</span>Asking one question across <em>all</em> servers ("which servers are unhealthy?") needs an <strong>OpenAI-compatible</strong> AI backend on the controller (Gemini, Groq, xAI, OpenRouter, Ollama…). The Claude Code backend runs tools locally only, so it can't drive remote boxes.</div>
+        <div class="callout warn"><span class="ct">Token scope</span>Today the join token is shared by every agent — keep it secret and use TLS (<code>wss://</code>) or a private network in transit. Per-agent credentials are on the <a href="https://github.com/AjjlalAhmed/servermind/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">roadmap</a>.</div>
+      </section>
+
       <!-- Uninstall -->
       <section id="uninstall" class="reveal">
-        <h2><span class="h2-no">07</span> Uninstall</h2>
+        <h2><span class="h2-no">08</span> Uninstall</h2>
         <p class="lead">One command removes ServerMind cleanly. It won't touch Bun, PM2, or git — you probably use those elsewhere.</p>
         <div class="codeblock">
           <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/uninstall.sh | bash</code></pre>
@@ -318,7 +346,7 @@ servermind.example.com {
 
       <!-- Security -->
       <section id="security" class="reveal">
-        <h2><span class="h2-no">08</span> Security model</h2>
+        <h2><span class="h2-no">09</span> Security model</h2>
         <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
@@ -334,7 +362,7 @@ servermind.example.com {
 
       <!-- Troubleshooting -->
       <section id="troubleshooting" class="reveal">
-        <h2><span class="h2-no">09</span> Troubleshooting</h2>
+        <h2><span class="h2-no">10</span> Troubleshooting</h2>
 
         <h3>I can't open the dashboard</h3>
         <p>It's bound to localhost by design. From your laptop, open an SSH tunnel (<a href="#access">above</a>) and visit <code>http://localhost:5500</code> — don't expect to hit the server's public IP directly.</p>
@@ -356,6 +384,9 @@ servermind.example.com {
 
         <h3>Test email fails with "SMTP 535"</h3>
         <p>535 means Gmail rejected the login. Use a <strong>Google App Password</strong> (16 chars), not your normal password, and paste it <strong>without spaces</strong> (<code>abcd efgh ijkl mnop</code> → <code>abcdefghijklmnop</code>). Confirm 2-Step Verification is on, host is <code>smtp.gmail.com</code>, and port is <code>465</code>.</p>
+
+        <h3>An agent won't show up in the Fleet</h3>
+        <p>Check the agent's logs (<code>pm2 logs servermind-agent</code>). Most often the <code>FLEET_JOIN_TOKEN</code> doesn't match the controller's, or <code>SERVERMIND_CONTROLLER</code> is wrong — it must be the full WebSocket URL ending in <code>/fleet/agent</code> and reachable from the agent (try <code>curl</code>-ing the controller host). Use <code>wss://</code> if the controller is behind HTTPS; a closed login is <code>1008 unauthorized</code> (token mismatch).</p>
 
         <p style="margin-top:26px">Still stuck? Open an issue on <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>.</p>
       </section>

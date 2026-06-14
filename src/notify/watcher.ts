@@ -6,9 +6,10 @@
 
 import { getStatusSnapshot } from "../status.ts";
 import { sendEmail } from "./email.ts";
-import { evaluateAlerts, buildDigest, type Alert } from "./report.ts";
+import { evaluateAlerts, buildDigest, buildFleetDigest, type Alert } from "./report.ts";
 import { evaluateCertAlerts } from "./cert.ts";
 import { emailEnabled, getAlerts, getEmail } from "../settings.ts";
+import { fleetEnabled, fleetRegistry } from "../fleet/hub.ts";
 
 const lastAlertAt = new Map<string, number>(); // alert key → epoch ms
 let lastDigestDay = ""; // YYYY-MM-DD of the last digest sent
@@ -23,23 +24,34 @@ async function tick(): Promise<void> {
   try {
     const snap = await getStatusSnapshot();
     const al = getAlerts();
-
-    // ── alerts (cooldown-gated) ──
     const cooldownMs = Math.max(1, al.cooldownMin) * 60_000;
     const now = Date.now();
 
-    const alerts: Alert[] = evaluateAlerts(snap);
-    // TLS-cert checks do a handshake, so run them on a slow throttle, not every minute.
+    // Send an alert if its per-key cooldown has elapsed.
+    const fire = async (key: string, a: Alert) => {
+      if (now - (lastAlertAt.get(key) ?? 0) < cooldownMs) return;
+      const r = await sendEmail(a.subject, `${a.body}\n\n— ServerMind`);
+      if (r.ok) lastAlertAt.set(key, now);
+      else console.error("[watcher] alert email failed:", r.error);
+    };
+
+    // ── local box ──
+    for (const a of evaluateAlerts(snap)) await fire(a.key, a);
+    // TLS-cert checks do a handshake, so run them on a slow throttle.
     if (al.certDomains.length && now - lastCertCheck >= CERT_CHECK_INTERVAL_MS) {
       lastCertCheck = now;
-      alerts.push(...(await evaluateCertAlerts()));
+      for (const a of await evaluateCertAlerts()) await fire(a.key, a);
     }
 
-    for (const a of alerts) {
-      if (now - (lastAlertAt.get(a.key) ?? 0) < cooldownMs) continue;
-      const r = await sendEmail(a.subject, `${a.body}\n\n— ServerMind`);
-      if (r.ok) lastAlertAt.set(a.key, now);
-      else console.error("[watcher] alert email failed:", r.error);
+    // ── fleet: each connected agent (keys namespaced per server) ──
+    if (fleetEnabled()) {
+      for (const srv of fleetRegistry()?.list() ?? []) {
+        if (!srv.online) {
+          await fire(`agent:${srv.id}:offline`, { key: "", subject: `🔴 ${srv.hostname}: agent offline`, body: `The ServerMind agent on ${srv.hostname} has stopped reporting.` });
+          continue;
+        }
+        if (srv.status) for (const a of evaluateAlerts(srv.status)) await fire(`${srv.id}:${a.key}`, a);
+      }
     }
 
     // ── daily digest (once per day at the configured hour, server local time) ──
@@ -48,7 +60,9 @@ async function tick(): Promise<void> {
       const day = d.toISOString().slice(0, 10);
       if (d.getHours() === al.digestHour && lastDigestDay !== day) {
         lastDigestDay = day;
-        const digest = buildDigest(snap);
+        const digest = fleetEnabled()
+          ? buildFleetDigest(snap, fleetRegistry()?.list() ?? [])
+          : buildDigest(snap);
         const r = await sendEmail(digest.subject, digest.body);
         if (!r.ok) console.error("[watcher] digest email failed:", r.error);
       }

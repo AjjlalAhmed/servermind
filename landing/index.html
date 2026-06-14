@@ -4,6 +4,33 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+<!-- Engage the GSAP motion layer: set the flag now (before the deferred scripts
+     run) so the legacy JS in script.js/award.js stands down for the animations it
+     hands off to GSAP. If the GSAP runtime never reports ready, fall back to a
+     fully visible, static page. -->
+<script>
+  (function () {
+    var h = document.documentElement;
+    h.classList.add("sm-gsap");
+    function fail() {
+      if (h.classList.contains("sm-gsap-ready")) return;
+      h.classList.add("sm-gsap-failed");
+      // GSAP never owned the dashboard count-up — fill the final values so a
+      // blocked CDN doesn't leave the stats reading 0.
+      document.querySelectorAll(".mk-val[data-count]").forEach(function (el) {
+        var dec = +(el.dataset.dec || 0);
+        el.textContent = parseFloat(el.dataset.count).toFixed(dec) + (el.dataset.suffix || "");
+      });
+      document.querySelectorAll(".mk-bar i").forEach(function (i) {
+        i.style.width = (i.dataset.w || 0) + "%";
+      });
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      setTimeout(fail, 5000);
+    });
+  })();
+</script>
+
 <!-- Microsoft Clarity (analytics) -->
 <script type="text/javascript">
   (function(c,l,a,r,i,t,y){
@@ -14,7 +41,7 @@
 </script>
 
 <title>ServerMind — Manage your Linux server by talking to it</title>
-<meta name="description" content="ServerMind is a free, open-source, self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — from one chat. No domain required. Bring your own AI: free Gemini, Claude, or any OpenAI-compatible API." />
+<meta name="description" content="ServerMind is a free, open-source, self-hosted AI assistant that monitors and runs your Linux VPS — PM2, Redis, MySQL, Nginx, disk, logs — from one chat. Run one server or manage a whole fleet from a single dashboard and login. No domain required. Bring your own AI: free Gemini, Claude, or any OpenAI-compatible API." />
 <meta name="theme-color" content="#0B0A07" />
 <meta name="author" content="Ajjlal Ahmed" />
 <meta name="application-name" content="ServerMind" />
@@ -39,6 +66,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="animations.css" />
 
 <!-- Structured data (SEO + AEO/GEO): entity definition for AI engines + FAQ extraction -->
 <script type="application/ld+json">
@@ -52,7 +80,7 @@
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "Server management & DevOps assistant",
       "operatingSystem": "Linux",
-      "description": "ServerMind is a free, open-source, self-hosted AI assistant for managing a Linux server through chat. It monitors and runs PM2, Redis, MySQL, Nginx, Caddy, disk, memory, ports and logs, with a live dashboard, behind password + TOTP 2FA. Bring your own AI: free Google Gemini, a Claude subscription, or any OpenAI-compatible API.",
+      "description": "ServerMind is a free, open-source, self-hosted AI assistant for managing a Linux server through chat. It monitors and runs PM2, Redis, MySQL, Nginx, Caddy, disk, memory, ports and logs, with a live dashboard, behind password + TOTP 2FA. Run a single server or manage a whole fleet of servers from one controller and one login. Bring your own AI: free Google Gemini, a Claude subscription, or any OpenAI-compatible API.",
       "url": "https://servermind.dev/",
       "downloadUrl": "https://servermind.dev/install.sh",
       "softwareVersion": "1.0.0",
@@ -62,6 +90,8 @@
       "featureList": [
         "Chat-based Linux server management in plain English",
         "Live dashboard: CPU, memory, disk, uptime, PM2 processes and service health",
+        "Multi-server fleet: monitor and manage many Linux servers from one controller and one login; agents dial out over a single WebSocket so no inbound ports are opened",
+        "Fleet-wide AI chat: ask one question across every server (e.g. which servers are unhealthy) and act on any of them",
         "Read-only command allowlist — no raw shell, command injection is structurally impossible",
         "Server-side \"arm\" switch required before any restart, stop or start",
         "Password + TOTP two-factor authentication, brute-force lockout, strict CSP",
@@ -108,6 +138,11 @@
           "@type": "Question",
           "name": "Do I need Caddy or Nginx to use ServerMind?",
           "acceptedAnswer": { "@type": "Answer", "text": "No. ServerMind serves its own web UI and runs on its own. A reverse proxy like Caddy or Nginx is only needed for a public HTTPS domain; the SSH tunnel and Tailscale access options require neither." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can ServerMind manage multiple servers?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Designate one ServerMind instance as a controller and have your other servers run a lightweight agent that dials out to it. You then monitor and manage the whole fleet — metrics, services, chat, reports — from a single dashboard and one login. Each server still enforces its own read-only allowlist and arm switch, and agents connect outbound only, so you don't open any new inbound ports. A single server needs none of this; it works zero-config on its own." }
         },
         {
           "@type": "Question",
@@ -169,6 +204,7 @@
     </a>
     <nav class="nav-links">
       <a href="#features">Features</a>
+      <a href="#fleet">Fleet</a>
       <a href="#security">Security</a>
       <a href="compare.html">Compare</a>
       <a href="#faq">FAQ</a>
@@ -278,20 +314,53 @@
         <div class="window-body">
           <aside class="mini-side">
             <div class="mini-brand"><span class="mini-logo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span> ServerMind</div>
-            <div class="mini-nav"><span class="mini-item on">Overview</span><span class="mini-item">Assistant</span></div>
-            <div class="mini-status"><span class="mini-dot"></span> All systems operational</div>
+            <div class="mini-nav" role="tablist">
+              <span class="mini-item on" data-tab="fleet" role="tab" tabindex="0">Fleet</span>
+              <span class="mini-item" data-tab="overview" role="tab" tabindex="0">This server</span>
+              <span class="mini-item">Chat</span>
+              <span class="mini-item">Settings</span>
+            </div>
+            <div class="mini-status"><span class="mini-dot"></span> <span class="mini-status-text">4 servers · 3 online</span></div>
           </aside>
           <div class="mini-main">
-            <div class="mini-grid">
-              <div class="mini-card"><span class="mk-label">CPU load</span><span class="mk-val mono" data-count="0.14" data-dec="2">0.00</span><span class="mk-bar"><i data-w="8"></i></span></div>
-              <div class="mini-card"><span class="mk-label">Memory</span><span class="mk-val mono" data-count="46" data-suffix="%">0%</span><span class="mk-bar"><i data-w="46"></i></span></div>
-              <div class="mini-card"><span class="mk-label">Disk</span><span class="mk-val mono" data-count="16" data-suffix="%">0%</span><span class="mk-bar"><i data-w="16"></i></span></div>
-              <div class="mini-card"><span class="mk-label">Uptime</span><span class="mk-val sm">12d 4h</span></div>
+            <!-- default tab: the whole fleet -->
+            <div class="mini-panel" data-panel="fleet">
+              <div class="fleet-mini">
+                <div class="fm-card">
+                  <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">web-1</span><span class="fm-state">online</span></div>
+                  <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.21</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">38%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">42%</span></span></div>
+                  <div class="fm-badges"><span class="fm-badge">redis</span><span class="fm-badge">nginx</span><span class="fm-badge">pm2 2</span></div>
+                </div>
+                <div class="fm-card">
+                  <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">db-1</span><span class="fm-state">online</span></div>
+                  <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.44</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">61%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v warn">88%</span></span></div>
+                  <div class="fm-badges"><span class="fm-badge">mysql</span><span class="fm-badge">redis</span></div>
+                </div>
+                <div class="fm-card">
+                  <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">cache-1</span><span class="fm-state">online</span></div>
+                  <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.09</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">24%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">31%</span></span></div>
+                  <div class="fm-badges"><span class="fm-badge">redis</span></div>
+                </div>
+                <div class="fm-card">
+                  <div class="fm-head"><span class="fm-dot off"></span><span class="fm-name">app-2</span><span class="fm-state">offline</span></div>
+                  <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">—</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">—</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">—</span></span></div>
+                  <div class="fm-badges"><span class="fm-badge down">pm2 down</span></div>
+                </div>
+              </div>
             </div>
-            <div class="mini-procs">
-              <div class="mp-row"><span class="mp-name">api-prod</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 2% · 184&nbsp;MB · ↻ 0</span></div>
-              <div class="mp-row"><span class="mp-name">worker-queue</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 0% · 92&nbsp;MB · ↻ 0</span></div>
-              <div class="mp-row"><span class="mp-name">nginx.service</span><span class="mp-pill">active</span><span class="mp-meta mono">since 12d</span></div>
+            <!-- second tab: this single server's own box -->
+            <div class="mini-panel" data-panel="overview" hidden>
+              <div class="mini-grid">
+                <div class="mini-card"><span class="mk-label">CPU load</span><span class="mk-val mono" data-count="0.14" data-dec="2">0.00</span><span class="mk-bar"><i data-w="8"></i></span></div>
+                <div class="mini-card"><span class="mk-label">Memory</span><span class="mk-val mono" data-count="46" data-suffix="%">0%</span><span class="mk-bar"><i data-w="46"></i></span></div>
+                <div class="mini-card"><span class="mk-label">Disk</span><span class="mk-val mono" data-count="16" data-suffix="%">0%</span><span class="mk-bar"><i data-w="16"></i></span></div>
+                <div class="mini-card"><span class="mk-label">Uptime</span><span class="mk-val sm">12d 4h</span></div>
+              </div>
+              <div class="mini-procs">
+                <div class="mp-row"><span class="mp-name">api-prod</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 2% · 184&nbsp;MB · ↻ 0</span></div>
+                <div class="mp-row"><span class="mp-name">worker-queue</span><span class="mp-pill">online</span><span class="mp-meta mono">cpu 0% · 92&nbsp;MB · ↻ 0</span></div>
+                <div class="mp-row"><span class="mp-name">nginx.service</span><span class="mp-pill">active</span><span class="mp-meta mono">since 12d</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -359,7 +428,12 @@
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>
           <h3>Live dashboard</h3>
-          <p>CPU, memory, disk, uptime, PM2 processes and service health — at a glance, auto-refreshing.</p>
+          <p>CPU, memory, disk, uptime, PM2 processes and service health — for one server or your whole fleet, auto-refreshing.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+          <h3>One controller, many servers</h3>
+          <p>Add as many boxes as you want. Each runs a lightweight agent that dials out to your controller — monitor and manage the whole fleet from one login. <a href="#fleet">See how →</a></p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
@@ -390,10 +464,64 @@
     </div>
   </section>
 
-  <!-- ─── how it works (sticky split) ─── -->
-  <section class="section alt" id="how">
+  <!-- ─── fleet (multi-server) ─── -->
+  <section class="section alt" id="fleet">
     <div class="container">
-      <div class="chapter reveal"><span class="chapter-no">03</span><span class="chapter-line"></span><span class="chapter-tag">Setup</span></div>
+      <div class="chapter reveal"><span class="chapter-no">03</span><span class="chapter-line"></span><span class="chapter-tag">Fleet</span></div>
+      <div class="split">
+      <div class="reveal">
+        <h2>One login.<br />Your whole fleet.</h2>
+        <p>Start with one server — that's the zero-config default. When you grow, point new boxes at a <strong>controller</strong> and watch every server light up in one dashboard. No per-server logins, no jumping between tabs.</p>
+        <p>Each box runs a lightweight <strong>agent</strong> that dials <em>out</em> to the controller over a single WebSocket — so there are no extra inbound ports to open, and the controller can be any one of your servers.</p>
+        <ul class="checks">
+          <li>One controller, one login — every server in a single view</li>
+          <li>Agents dial out — no new inbound ports, no firewall changes</li>
+          <li>Every box still enforces its <em>own</em> read-only allowlist + arm switch</li>
+          <li>Reports &amp; alerts from the whole fleet, deduped into one inbox</li>
+          <li>Ask once, across all of them — “which servers are unhealthy?”</li>
+        </ul>
+      </div>
+      <div class="reveal">
+        <div class="window fleet-window">
+          <div class="window-bar">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="window-title">servermind.dev › Fleet</span>
+          </div>
+          <div class="mini-main">
+            <div class="fleet-mini">
+              <div class="fm-card">
+                <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">web-1</span><span class="fm-state">online</span></div>
+                <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.21</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">38%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">42%</span></span></div>
+                <div class="fm-badges"><span class="fm-badge">redis</span><span class="fm-badge">nginx</span><span class="fm-badge">pm2 2</span></div>
+              </div>
+              <div class="fm-card">
+                <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">db-1</span><span class="fm-state">online</span></div>
+                <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.44</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">61%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v warn">88%</span></span></div>
+                <div class="fm-badges"><span class="fm-badge">mysql</span><span class="fm-badge">redis</span></div>
+              </div>
+              <div class="fm-card">
+                <div class="fm-head"><span class="fm-dot"></span><span class="fm-name">cache-1</span><span class="fm-state">online</span></div>
+                <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">0.09</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">24%</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">31%</span></span></div>
+                <div class="fm-badges"><span class="fm-badge">redis</span></div>
+              </div>
+              <div class="fm-card">
+                <div class="fm-head"><span class="fm-dot off"></span><span class="fm-name">app-2</span><span class="fm-state">offline</span></div>
+                <div class="fm-stats"><span class="fm-stat"><span class="fm-k">CPU</span><span class="fm-v">—</span></span><span class="fm-stat"><span class="fm-k">Mem</span><span class="fm-v">—</span></span><span class="fm-stat"><span class="fm-k">Disk</span><span class="fm-v">—</span></span></div>
+                <div class="fm-badges"><span class="fm-badge down">pm2 down</span></div>
+              </div>
+            </div>
+            <div class="fleet-foot"><span class="ff-q">$ which servers are unhealthy?</span> <span class="ff-a">db-1 disk 88%, app-2 offline</span></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── how it works (sticky split) ─── -->
+  <section class="section" id="how">
+    <div class="container">
+      <div class="chapter reveal"><span class="chapter-no">04</span><span class="chapter-line"></span><span class="chapter-tag">Setup</span></div>
       <div class="how-grid">
       <div class="how-aside">
         <h2>From zero to chatting in three steps.</h2>
@@ -411,7 +539,7 @@
   <!-- ─── security ─── -->
   <section class="section" id="security">
     <div class="container">
-      <div class="chapter reveal"><span class="chapter-no">04</span><span class="chapter-line"></span><span class="chapter-tag">Security</span></div>
+      <div class="chapter reveal"><span class="chapter-no">05</span><span class="chapter-line"></span><span class="chapter-tag">Security</span></div>
       <div class="split">
       <div class="reveal">
         <h2>Your server. Your keys.<br />Your data.</h2>
@@ -442,7 +570,7 @@
   <!-- ─── FAQ ─── -->
   <section class="section alt" id="faq">
     <div class="container">
-      <div class="chapter reveal"><span class="chapter-no">05</span><span class="chapter-line"></span><span class="chapter-tag">Questions</span></div>
+      <div class="chapter reveal"><span class="chapter-no">06</span><span class="chapter-line"></span><span class="chapter-tag">Questions</span></div>
       <div class="sec-head reveal">
         <h2>The questions you'd ask before trusting it.</h2>
         <p>Straight answers on cost, access, and what an AI can actually do to your server.</p>
@@ -468,6 +596,14 @@
           <summary>Do I need Caddy or Nginx? <span class="faq-x" aria-hidden="true"></span></summary>
           <div class="faq-a">
             <p>No. ServerMind serves its own UI — it runs fine on its own. A reverse proxy like Caddy or Nginx is only needed if you want a public domain with HTTPS, and the setup wizard prints a ready-to-paste config when you do. For the SSH-tunnel or Tailscale path, you need neither.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary>Can it manage more than one server? <span class="faq-x" aria-hidden="true"></span></summary>
+          <div class="faq-a">
+            <p>Yes. One server works on its own with zero config. When you want more, pick one instance as a <strong>controller</strong> and run a lightweight <strong>agent</strong> on each other box — it dials <em>out</em> to the controller, so no new inbound ports are opened. Every server then shows up in one dashboard under a single login, with fleet-wide chat and reports.</p>
+            <p>Security carries over per box: each agent enforces its <em>own</em> read-only allowlist and arm switch — the controller can ask, but it can't bypass a server's guardrails. The <a href="docs.html#fleet">fleet setup guide</a> has the steps.</p>
           </div>
         </details>
 
@@ -546,6 +682,7 @@
     </div>
     <div class="footer-links">
       <a href="#features">Features</a>
+      <a href="#fleet">Fleet</a>
       <a href="#security">Security</a>
       <a href="compare.html">Compare</a>
       <a href="#faq">FAQ</a>
@@ -558,5 +695,14 @@
 
 <script src="script.js" defer></script>
 <script src="award.js" defer></script>
+
+<!-- GSAP motion layer (buildless): core + ScrollTrigger as UMD from jsDelivr,
+     then the ES-module entry that wires up /animations/*.js. onerror falls the
+     page back to its static state if the CDN is blocked. -->
+<script defer src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"
+        onerror="document.documentElement.classList.add('sm-gsap-failed')"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"
+        onerror="document.documentElement.classList.add('sm-gsap-failed')"></script>
+<script type="module" src="animations/index.js"></script>
 </body>
 </html>

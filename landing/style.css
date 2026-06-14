@@ -380,6 +380,37 @@ h1 {
 }
 .mp-meta { margin-left: auto; font-size: 11px; color: var(--text-muted); }
 
+/* ── fleet (multi-server) dashboard preview ── */
+.fleet-window { box-shadow: 0 30px 90px -40px rgba(245,165,36,0.22); }
+.fleet-mini { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.fm-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 9px; background: var(--surface); }
+.fm-head { display: flex; align-items: center; gap: 7px; }
+.fm-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--green); box-shadow: 0 0 0 3px rgba(74,222,128,0.14); flex-shrink: 0; }
+.fm-dot.off { background: var(--red); box-shadow: 0 0 0 3px rgba(248,113,113,0.14); }
+.fm-name { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.fm-state { margin-left: auto; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); }
+.fm-stats { display: flex; gap: 14px; }
+.fm-stat { display: flex; flex-direction: column; gap: 1px; }
+.fm-k { font-size: 9.5px; color: var(--text-muted); }
+.fm-v { font-family: var(--font-mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fm-v.warn { color: var(--accent-2); }
+.fm-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.fm-badge {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .02em;
+  color: var(--green); background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
+  padding: 1px 6px; border-radius: 5px;
+}
+.fm-badge.down { color: var(--red); background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.2); }
+.fleet-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-dim); }
+.fleet-foot .ff-q { font-family: var(--font-mono); color: var(--accent-2); }
+.fleet-foot .ff-a { color: var(--text-muted); }
+@media (max-width: 560px) { .fleet-mini { grid-template-columns: 1fr; } }
+
+/* hero preview tabs (Fleet ⇄ this server), driven from the sidebar nav */
+.mini-panel[hidden] { display: none; }
+.mini-item[data-tab] { cursor: pointer; transition: color .15s, background .15s; }
+.mini-item[data-tab]:hover { color: var(--text-dim); }
+
 /* connected step pipeline — the line earns its place: this is a real sequence */
 .steps { position: relative; }
 .steps::before {

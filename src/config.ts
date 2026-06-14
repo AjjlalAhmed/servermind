@@ -12,8 +12,9 @@ function optional(name: string, fallback: string): string {
 }
 
 function list(name: string, fallback: string[]): string[] {
-  const raw = optional(name, "");
-  if (!raw) return fallback;
+  const raw = process.env[name];
+  if (raw === undefined) return fallback; // unset → default
+  // Explicitly set (even to "") is honored — so MONITORED_UNITS="" disables it.
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 

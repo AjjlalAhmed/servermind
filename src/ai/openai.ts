@@ -8,6 +8,7 @@
 import { getAI } from "../settings.ts";
 import { isMutatingCall } from "../tools/index.ts";
 import { localAgent } from "../agent.ts";
+import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, isFleetTool, dispatchFleetTool } from "../fleet/tools.ts";
 import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
 
 const MAX_TURNS = 10;
@@ -109,8 +110,9 @@ export async function runChat(
     return;
   }
 
+  const tools = opts.fleet ? [...TOOLS, ...FLEET_TOOLS] : TOOLS;
   const messages: any[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") },
     ...history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
       .map((h) => ({ role: h.role, content: h.content })),
@@ -131,7 +133,7 @@ export async function runChat(
         body: JSON.stringify({
           model: ai.model,
           messages,
-          tools: TOOLS,
+          tools,
           tool_choice: "auto",
           stream: true,
           max_tokens: 4096,
@@ -202,7 +204,10 @@ export async function runChat(
         try { input = JSON.parse(c.args || "{}"); } catch { input = {}; }
         emit({ type: "tool_use", id: c.id, name: c.name, input, mutating: isMutatingCall(c.name, input) });
 
-        const result = await localAgent.invoke(c.name, input, !!opts.allowMutations);
+        // Fleet tools (list/run across servers) vs a per-box tool on the target.
+        const result = isFleetTool(c.name)
+          ? await dispatchFleetTool(c.name, input)
+          : await (opts.agent ?? localAgent).invoke(c.name, input, !!opts.allowMutations);
         emit({ type: "tool_result", id: c.id, isError: result.isError, preview: preview(result.content) });
 
         messages.push({ role: "tool", tool_call_id: c.id, content: result.content });

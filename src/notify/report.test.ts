@@ -1,7 +1,7 @@
 // Tests for alert evaluation + digest building (pure functions).
 
 import { test, expect, describe } from "bun:test";
-import { evaluateAlerts, buildDigest } from "./report.ts";
+import { evaluateAlerts, buildDigest, buildFleetDigest } from "./report.ts";
 import type { StatusSnapshot } from "../status.ts";
 
 function snap(over: { disk?: number; mem?: number; services?: Record<string, string> } = {}): StatusSnapshot {
@@ -52,5 +52,20 @@ describe("buildDigest", () => {
     const d = buildDigest(snap({ disk: 99 }));
     expect(d.subject).toContain("1 issue");
     expect(d.body).toContain("need attention");
+  });
+});
+
+describe("buildFleetDigest", () => {
+  test("covers the controller + every agent and counts fleet-wide issues", () => {
+    const d = buildFleetDigest(snap(), [
+      { hostname: "web-1", online: true, status: snap() },
+      { hostname: "db-1", online: false, status: null },
+      { hostname: "cache-1", online: true, status: snap({ disk: 99 }) },
+    ]);
+    expect(d.subject).toContain("4 servers"); // controller + 3 agents
+    expect(d.subject).toContain("issue");      // db-1 offline + cache-1 disk = 2 issues
+    expect(d.body).toContain("web-1");
+    expect(d.body).toContain("db-1 — OFFLINE");
+    expect(d.body).toContain("(controller)");
   });
 });

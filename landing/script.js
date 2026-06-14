@@ -3,6 +3,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
+/* When the GSAP motion layer is engaged (html.sm-gsap), it owns the nav scroll
+   state, the scroll reveals, the dashboard count-up and the FAQ accordion — so
+   those blocks stand down here to avoid double-firing. Everything else (copy
+   button, the typed story, Mindy, docs scrollspy) is GSAP-agnostic and stays. */
+const GSAP = document.documentElement.classList.contains("sm-gsap");
+
 /* ─── copy install command ─── */
 $$(".copy-btn").forEach((btn) => {
   btn.addEventListener("click", async () => {
@@ -14,31 +20,35 @@ $$(".copy-btn").forEach((btn) => {
   });
 });
 
-/* ─── nav scroll state ─── */
-const nav = $(".nav");
-const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
-addEventListener("scroll", onScroll, { passive: true });
-onScroll();
-
-/* ─── staggered reveal (delay per sibling group) ─── */
-const groups = new Map();
-$$(".reveal").forEach((el) => {
-  const p = el.parentElement;
-  const i = groups.get(p) || 0;
-  el.style.setProperty("--d", Math.min(i, 6) * 70 + "ms");
-  groups.set(p, i + 1);
-});
-if (window.IntersectionObserver) {
-  const io = new IntersectionObserver(
-    (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }),
-    { rootMargin: "0px 0px -8% 0px", threshold: 0.04 },
-  );
-  $$(".reveal").forEach((el) => io.observe(el));
-} else {
-  $$(".reveal").forEach((el) => el.classList.add("in"));
+/* ─── nav scroll state (GSAP owns .scrolled when engaged) ─── */
+if (!GSAP) {
+  const nav = $(".nav");
+  const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
 }
 
-/* ─── count-up metrics + bar fill (when the preview enters view) ─── */
+/* ─── staggered reveal (GSAP ScrollTrigger owns reveals when engaged) ─── */
+if (!GSAP) {
+  const groups = new Map();
+  $$(".reveal").forEach((el) => {
+    const p = el.parentElement;
+    const i = groups.get(p) || 0;
+    el.style.setProperty("--d", Math.min(i, 6) * 70 + "ms");
+    groups.set(p, i + 1);
+  });
+  if (window.IntersectionObserver) {
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }),
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.04 },
+    );
+    $$(".reveal").forEach((el) => io.observe(el));
+  } else {
+    $$(".reveal").forEach((el) => el.classList.add("in"));
+  }
+}
+
+/* ─── count-up metrics + bar fill (GSAP owns this when engaged) ─── */
 function countUp(el) {
   const target = parseFloat(el.dataset.count), dec = +(el.dataset.dec || 0), suf = el.dataset.suffix || "";
   if (RM) { el.textContent = target.toFixed(dec) + suf; return; }
@@ -50,7 +60,7 @@ function countUp(el) {
   })(performance.now());
 }
 const preview = $(".window");
-if (preview && window.IntersectionObserver) {
+if (!GSAP && preview && window.IntersectionObserver) {
   const po = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return;
@@ -61,6 +71,26 @@ if (preview && window.IntersectionObserver) {
   }, { threshold: 0.3 });
   po.observe(preview);
 }
+
+/* ─── hero preview tabs: Fleet ⇄ this server (sidebar nav drives it) ─── */
+(() => {
+  const tabs = $$(".mini-nav [data-tab]");
+  if (!tabs.length) return;
+  const panels = $$(".mini-main .mini-panel");
+  const statusText = $(".mini-status-text");
+  const STATUS = { fleet: "4 servers · 3 online", overview: "All systems operational" };
+  const select = (name) => {
+    tabs.forEach((t) => t.classList.toggle("on", t.dataset.tab === name));
+    panels.forEach((p) => { p.hidden = p.dataset.panel !== name; });
+    if (statusText && STATUS[name]) statusText.textContent = STATUS[name];
+  };
+  tabs.forEach((t) => {
+    t.addEventListener("click", () => select(t.dataset.tab));
+    t.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(t.dataset.tab); }
+    });
+  });
+})();
 
 /* ─── mouse-follow spotlight on feature cards ─── */
 if (!RM) {
@@ -122,14 +152,16 @@ if (story && window.IntersectionObserver) {
   runStory(story);
 }
 
-/* ─── FAQ: single-open accordion (one answer at a time) ─── */
-const faqItems = $$(".faq-item");
-faqItems.forEach((item) => {
-  item.addEventListener("toggle", () => {
-    if (!item.open) return;
-    faqItems.forEach((other) => { if (other !== item) other.open = false; });
+/* ─── FAQ: single-open accordion (GSAP owns the animated accordion when engaged) ─── */
+if (!GSAP) {
+  const faqItems = $$(".faq-item");
+  faqItems.forEach((item) => {
+    item.addEventListener("toggle", () => {
+      if (!item.open) return;
+      faqItems.forEach((other) => { if (other !== item) other.open = false; });
+    });
   });
-});
+}
 
 /* ─── Docs: scrollspy that lights the active TOC link ─── */
 (function () {

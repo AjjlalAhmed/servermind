@@ -3,6 +3,10 @@ const wrap = $("#wrap"), input = $("#input"), sendBtn = $("#send");
 let history = [];
 let busy = false;
 let armed = false;
+let chatServer = null;      // null = the local controller box; else a remote agent id
+let chatServerName = "";
+let fleetCanChat = false;   // controller's AI backend can drive remote boxes
+let isController = false;    // this instance manages a fleet (vs a standalone box)
 let lastStatus = null;
 const cpuHist = [], memHist = [];   // rolling samples for sparklines
 
@@ -17,7 +21,7 @@ function showView(name) {
     v.classList.toggle("flex", on && name === "assistant");
   });
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
-  $("#pageTitle").textContent = name === "assistant" ? "Assistant" : name === "settings" ? "Settings" : name === "fleet" ? "Fleet" : "Overview";
+  $("#pageTitle").textContent = name === "assistant" ? "Chat" : name === "settings" ? "Settings" : name === "fleet" ? "Fleet" : (isController ? "This server" : "Overview");
   if (location.hash.slice(1) !== name) location.hash = name; // each view has its own URL: bookmarkable, back/forward works
   if (name === "assistant") setTimeout(() => input.focus(), 30);
   if (name === "settings") loadSettings();
@@ -42,7 +46,7 @@ function renderArm() {
 $("#arm").onclick = async () => {
   const want = !armed, b = $("#arm");
   b.disabled = true;
-  try { const r = await fetch("/auth/arm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on: want }) }); if (r.ok) { const d = await r.json(); armed = !!d.armed; } } catch {}
+  try { const r = await fetch("/auth/arm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on: want, server: chatServer || undefined }) }); if (r.ok) { const d = await r.json(); armed = !!d.armed; } } catch {}
   b.disabled = false; renderArm();
 };
 
@@ -60,14 +64,14 @@ async function connect() {
   $("#gateErr").textContent = "…";
   try {
     const r = await fetch("/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password, totp }) });
-    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); refreshFleetNav(); showView(viewFromHash()); return; }
+    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); fetch("/auth/me").then((x) => x.json()).then(afterAuth).catch(() => showView("overview")); return; }
     const data = await r.json().catch(() => ({}));
     if (r.status === 503) return showGate("Auth not set up — run `bun run setup-auth` on the server.");
     if (r.status === 429) return showGate(`Locked out — try again in ${data.retryAfterSec || 60}s.`);
     showGate(data.error || "Invalid credentials.");
   } catch (e) { showGate("Connection failed: " + e.message); }
 }
-$("#logout").onclick = async () => { try { await fetch("/auth/logout", { method: "POST" }); } catch {} history = []; wrap.innerHTML = ""; showGate(""); };
+$("#logout").onclick = async () => { try { await fetch("/auth/logout", { method: "POST" }); } catch {} history = []; wrap.innerHTML = ""; chatServer = null; chatServerName = ""; renderChatContext(); showGate(""); };
 
 // ─── formatting + sparkline ─────────────────────────────────────────────────────
 function fmtBytes(n) { if (!n || n < 0) return "0 B"; const u = ["B", "KB", "MB", "GB", "TB"]; let i = Math.floor(Math.log(n) / Math.log(1024)); i = Math.min(i, u.length - 1); return (n / 1024 ** i).toFixed(i ? 1 : 0) + " " + u[i]; }
@@ -165,7 +169,7 @@ async function loadStatus() {
 function renderDashboard(s) {
   const m = s.metrics || {};
   const host = s.host || {};
-  $("#hostName").textContent = host.hostname || "—";
+  $("#hostName").textContent = (isController ? "Controller · " : "") + (host.hostname || "—");
 
   // sparkline history
   const cpuPct = m.cpu && m.cpu.cores ? Math.min(Math.round((m.cpu.load1 / m.cpu.cores) * 100), 100) : null;
@@ -342,7 +346,7 @@ async function send() {
   let liveCards = {};
   abortCtrl = new AbortController();
   try {
-    const res = await fetch("/chat", { method: "POST", headers: { "content-type": "application/json" }, signal: abortCtrl.signal, body: JSON.stringify({ message: text, history: history.slice(0, -1), allowMutations: armed }) });
+    const res = await fetch("/chat", { method: "POST", headers: { "content-type": "application/json" }, signal: abortCtrl.signal, body: JSON.stringify({ message: text, history: history.slice(0, -1), server: chatServer || undefined }) });
     if (res.status === 401) { showGate("Session expired — sign in again."); throw new Error("unauthorized"); }
     if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
     const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -394,7 +398,7 @@ showSkeletons();   // paint placeholders on first frame, before /auth/me resolve
 (async function boot() {
   try {
     const r = await fetch("/auth/me"); const me = await r.json();
-    if (me.authenticated) { armed = !!me.armed; renderArm(); applyAuthState(me); loadStatus(); showView(viewFromHash()); }
+    if (me.authenticated) { armed = !!me.armed; renderArm(); loadStatus(); afterAuth(me); }
     else if (!me.configured) showGate("Auth not set up — run `bun run setup-auth` on the server.");
     else showGate("");
   } catch { showGate(""); }
@@ -484,10 +488,18 @@ if ($("#setReportNow")) $("#setReportNow").onclick = async () => {
 
 // ─── fleet (controller multi-server view) ────────────────────────────────────
 function applyAuthState(me) {
+  isController = !!(me && me.fleet);
   const nav = $("#navFleet");
-  if (nav) nav.style.display = me && me.fleet ? "" : "none";
+  if (nav) nav.style.display = isController ? "" : "none";          // Fleet nav only on a controller
+  const lbl = $("#navOverviewLabel");
+  if (lbl) lbl.textContent = isController ? "This server" : "Overview"; // own box is secondary on a controller
 }
-function refreshFleetNav() { fetch("/auth/me").then((r) => r.json()).then(applyAuthState).catch(() => {}); }
+// On a controller the default landing is the Fleet (all servers); a standalone
+// box lands on its own Overview. An explicit #hash always wins.
+function afterAuth(me) {
+  applyAuthState(me);
+  showView(location.hash.slice(1) ? viewFromHash() : (me && me.fleet ? "fleet" : "overview"));
+}
 
 async function loadFleet() {
   const grid = $("#fleetGrid");
@@ -498,8 +510,47 @@ async function loadFleet() {
     const d = await r.json();
     if (!d.enabled) { grid.innerHTML = `<div class="fleet-empty">This instance isn't a controller. Set <code>FLEET_JOIN_TOKEN</code> and install agents to manage multiple servers from here.</div>`; return; }
     if (!d.servers.length) { grid.innerHTML = `<div class="fleet-empty">No servers connected yet. Install the agent on a server, pointing it at this controller.</div>`; return; }
+    fleetCanChat = !!d.canChat;
     grid.innerHTML = d.servers.map(fleetCard).join("");
+    const online = d.servers.filter((s) => s.online).length;
+    const sum = $("#fleetSummary");
+    if (sum) sum.textContent = `${d.servers.length} server${d.servers.length !== 1 ? "s" : ""} · ${online} online`;
   } catch { /* keep last render */ }
+}
+
+// Fleet card actions: "Manage" → chat that server; "Remove" → drop a stale one.
+$("#fleetGrid") && $("#fleetGrid").addEventListener("click", (e) => {
+  const m = e.target.closest(".fc-manage");
+  if (m) { selectServer(m.dataset.server, m.dataset.host, m.dataset.armed === "1"); return; }
+  const rm = e.target.closest(".fc-remove");
+  if (rm) { removeServer(rm.dataset.server, rm.dataset.host); }
+});
+async function removeServer(id, host) {
+  if (!confirm(`Remove "${host}" from the fleet?\nIt will reappear if its agent reconnects.`)) return;
+  try { await fetch("/fleet/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ server: id }) }); } catch {}
+  loadFleet();
+}
+function selectServer(id, host, isArmed) {
+  chatServer = id; chatServerName = host;
+  armed = !!isArmed; renderArm();
+  renderChatContext();
+  history = []; wrap.innerHTML = "";
+  showView("assistant");
+}
+function clearServer() {
+  chatServer = null; chatServerName = "";
+  history = []; wrap.innerHTML = "";
+  renderChatContext();
+  fetch("/auth/me").then((r) => r.json()).then((me) => { armed = !!me.armed; renderArm(); }).catch(() => {});
+}
+function renderChatContext() {
+  const el = $("#chatContext");
+  if (!el) return;
+  if (chatServer) {
+    el.style.display = "";
+    el.innerHTML = `<span class="cc-dot"></span>Managing <b>${esc(chatServerName)}</b><button class="cc-clear" id="ccClear" title="Back to this server">✕</button>`;
+    $("#ccClear").onclick = clearServer;
+  } else { el.style.display = "none"; el.innerHTML = ""; }
 }
 
 function fleetCard(s) {
@@ -510,6 +561,11 @@ function fleetCard(s) {
   const diskPct = m ? m.disk.usedPct : null;
   const svc = s.status && s.status.services ? Object.values(s.status.services) : [];
   const up = svc.filter((v) => v === "active").length;
+  const st = s.status || {};
+  const badges = [];
+  if (st.redis && typeof st.redis.connected === "boolean") badges.push(`<span class="fc-badge ${st.redis.connected ? "ok" : "down"}">redis</span>`);
+  if (st.mysql) badges.push(`<span class="fc-badge ${st.mysql.ok ? "ok" : "down"}">mysql</span>`);
+  if (st.pm2) { const n = Array.isArray(st.pm2.processes) ? st.pm2.processes.length : null; badges.push(`<span class="fc-badge ${st.pm2.ok ? "ok" : "down"}">pm2${n != null ? " " + n : ""}</span>`); }
   return `<div class="fleet-card${s.online ? "" : " off"}">
     <div class="fc-head">
       <span class="fc-dot ${s.online ? "ok" : "down"}"></span>
@@ -521,6 +577,12 @@ function fleetCard(s) {
       <div class="fc-m"><span class="fc-k">Mem</span><span class="fc-v ${memPct != null ? tone(memPct) : ""}">${memPct != null ? memPct + "%" : "—"}</span></div>
       <div class="fc-m"><span class="fc-k">Disk</span><span class="fc-v ${diskPct != null ? tone(diskPct) : ""}">${diskPct != null ? diskPct + "%" : "—"}</span></div>
     </div>
-    <div class="fc-foot">${svc.length ? `${up}/${svc.length} services up` : (m ? "no services monitored" : "awaiting first report…")}</div>
+    ${badges.length ? `<div class="fc-svcs">${badges.join("")}</div>` : ""}
+    <div class="fc-foot">
+      <span>${svc.length ? `${up}/${svc.length} up` : (m ? "no units" : "waiting…")}</span>
+      ${s.online
+        ? (fleetCanChat ? `<button class="fc-manage" data-server="${esc(s.id)}" data-host="${esc(s.hostname)}" data-armed="${s.armed ? 1 : 0}">Manage →</button>` : "")
+        : `<button class="fc-remove" data-server="${esc(s.id)}" data-host="${esc(s.hostname)}">Remove</button>`}
+    </div>
   </div>`;
 }
