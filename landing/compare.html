@@ -122,35 +122,35 @@
           <table class="cmp-table">
             <thead>
               <tr>
-                <th>Tool</th><th>Self-hosted</th><th>Web dashboard</th><th>Conversational AI</th><th>Safety guardrails</th><th>No domain needed</th><th>Interface</th>
+                <th>Tool</th><th>Self-hosted</th><th>Web dashboard</th><th>Conversational AI</th><th>Safety guardrails</th><th>Multi-server</th><th>No domain needed</th><th>Interface</th>
               </tr>
             </thead>
             <tbody>
               <tr class="me">
-                <td>ServerMind</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Arm switch + allowlist</td><td class="yes">Yes</td><td>Web dashboard</td>
+                <td>ServerMind</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Arm switch + allowlist</td><td class="yes">Fleet, 1 login</td><td class="yes">Yes</td><td>Web dashboard</td>
               </tr>
               <tr>
-                <td>OpenClaw</td><td class="yes">Yes</td><td class="no">No</td><td class="yes">Yes</td><td class="mid">Review / auto-mode</td><td class="yes">Yes</td><td>Telegram / Discord</td>
+                <td>OpenClaw</td><td class="yes">Yes</td><td class="no">No</td><td class="yes">Yes</td><td class="mid">Review / auto-mode</td><td class="mid">Multi-agent</td><td class="yes">Yes</td><td>Telegram / Discord</td>
               </tr>
               <tr>
-                <td>Teleport Assist</td><td class="mid">Enterprise</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Session-guarded</td><td class="no">No</td><td>Teleport platform</td>
+                <td>Teleport Assist</td><td class="mid">Enterprise</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Session-guarded</td><td class="yes">Many hosts</td><td class="no">No</td><td>Teleport platform</td>
               </tr>
               <tr>
-                <td>Portainer MCP</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="mid">Via MCP client</td><td class="mid">Read-only mode</td><td class="mid">Depends</td><td>Portainer + MCP</td>
+                <td>Portainer MCP</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="mid">Via MCP client</td><td class="mid">Read-only mode</td><td class="yes">Multi-endpoint</td><td class="mid">Depends</td><td>Portainer + MCP</td>
               </tr>
               <tr>
-                <td>Netdata</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Explains data</td><td class="mid">Read-only</td><td class="mid">Depends</td><td>Monitoring platform</td>
+                <td>Netdata</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Explains data</td><td class="mid">Read-only</td><td class="yes">Multi-node</td><td class="mid">Depends</td><td>Monitoring platform</td>
               </tr>
               <tr>
-                <td>Cockpit / Webmin</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">—</td><td class="mid">Depends</td><td>Web config UI</td>
+                <td>Cockpit / Webmin</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">—</td><td class="yes">Add hosts</td><td class="mid">Depends</td><td>Web config UI</td>
               </tr>
               <tr>
-                <td>Warp</td><td class="no">Local app</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">N/A</td><td>Terminal</td>
+                <td>Warp</td><td class="no">Local app</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Local only</td><td class="no">N/A</td><td>Terminal</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p class="cmp-note">“Depends” = possible but needs your own setup. Categories and capabilities are summarized; check each project for current details.</p>
+        <p class="cmp-note">“Depends” = possible but needs your own setup. Under <b>Multi-server</b>, ServerMind gives a unified fleet under one login; OpenClaw runs multiple isolated agents rather than a single server console; Cockpit adds hosts you switch between. Categories and capabilities are summarized; check each project for current details.</p>
       </section>
 
       <!-- Most similar -->
@@ -200,8 +200,8 @@
       <!-- Summary -->
       <section class="reveal">
         <h2>Where ServerMind stands out</h2>
-        <p>What makes ServerMind fairly unique is the <strong>combination</strong>: self-hosted + a web dashboard + conversational AI + safety guardrails (an arm switch and a read-only allowlist) + <strong>zero domain required</strong>. Most alternatives either need a cloud account, lack the safety layer, or are heavier and more complex to set up. It's one of the lightest, most focused tools in this space.</p>
-        <div class="callout note"><span class="ct">In one line</span>If you want to <strong>chat with one Linux box</strong> — safely, self-hosted, with a dashboard, in two minutes, with no domain — ServerMind is the most focused fit. For broad personal automation pick OpenClaw; for deep observability pick Netdata; for Docker fleets pick Portainer.</div>
+        <p>What makes ServerMind fairly unique is the <strong>combination</strong>: self-hosted + a web dashboard + conversational AI + safety guardrails (an arm switch and a read-only allowlist) + <strong>zero domain required</strong> — and it scales from one box to a <strong>whole fleet</strong> under a single login, with agents that dial out (no new inbound ports) over an optional self-hosted WireGuard mesh. Most alternatives either need a cloud account, lack the safety layer, or are heavier and more complex to set up. It's one of the lightest, most focused tools in this space.</p>
+        <div class="callout note"><span class="ct">In one line</span>If you want to <strong>chat with your Linux servers</strong> — one box or a fleet, safely, self-hosted, with a dashboard, in two minutes, with no domain — ServerMind is the most focused fit. For broad personal automation pick OpenClaw; for deep observability pick Netdata; for Docker/Kubernetes orchestration pick Portainer.</div>
 
         <div class="codeblock" style="margin-top: 22px;">
           <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code></pre>

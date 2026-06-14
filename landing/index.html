@@ -143,7 +143,7 @@
         {
           "@type": "Question",
           "name": "Can ServerMind manage multiple servers?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Designate one ServerMind instance as a controller and have your other servers run a lightweight agent that dials out to it. You then monitor and manage the whole fleet — metrics, services, chat, reports — from a single dashboard and one login. Each server still enforces its own read-only allowlist and arm switch, and agents connect outbound only, so you don't open any new inbound ports. A single server needs none of this; it works zero-config on its own." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Designate one ServerMind instance as a controller and have your other servers run a lightweight agent that dials out to it. You then monitor and manage the whole fleet — metrics, services, chat, reports — from a single dashboard and one login. Each server still enforces its own read-only allowlist and arm switch, and agents connect outbound only, so you don't open any new inbound ports. If the controller has no public address, the installer can set up an optional self-hosted WireGuard mesh (install.sh --mesh) so the fleet communicates over a private encrypted network without Tailscale or any public exposure. A single server needs none of this; it works zero-config on its own." }
         },
         {
           "@type": "Question",
@@ -606,6 +606,7 @@
           <summary>Can it manage more than one server? <span class="faq-x" aria-hidden="true"></span></summary>
           <div class="faq-a">
             <p>Yes. One server works on its own with zero config. When you want more, pick one instance as a <strong>controller</strong> and run a lightweight <strong>agent</strong> on each other box — it dials <em>out</em> to the controller, so no new inbound ports are opened. Every server then shows up in one dashboard under a single login, with fleet-wide chat and reports.</p>
+            <p>If your controller has no public IP or domain, the installer can stand up an optional self-hosted <strong>WireGuard mesh</strong> (<code>install.sh --mesh</code>) — a private encrypted network your fleet talks over, so you don't need Tailscale or to expose anything publicly.</p>
             <p>Security carries over per box: each agent enforces its <em>own</em> read-only allowlist and arm switch — the controller can ask, but it can't bypass a server's guardrails. The <a href="docs.html#fleet">fleet setup guide</a> has the steps.</p>
           </div>
         </details>
