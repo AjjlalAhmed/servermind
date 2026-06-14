@@ -11,6 +11,7 @@
 // event stream and forward text deltas, tool calls and tool results.
 
 import { config } from "./config.ts";
+import { getAI } from "./settings.ts";
 import { isMutatingCall } from "./tools/index.ts";
 
 const ROOT = new URL("..", import.meta.url).pathname; // project root
@@ -129,7 +130,7 @@ export async function runChat(
     "--output-format", "stream-json",
     "--verbose",
     "--include-partial-messages",
-    "--model", config.model,
+    "--model", getAI().claudeModel,
     "--append-system-prompt", SYSTEM_PROMPT,
     "--mcp-config", mcpConfig,
     "--allowedTools", ALLOWED_TOOLS,

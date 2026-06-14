@@ -14,8 +14,9 @@ function showView(name) {
     v.classList.toggle("flex", on && name === "assistant");
   });
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
-  $("#pageTitle").textContent = name === "assistant" ? "Assistant" : "Overview";
+  $("#pageTitle").textContent = name === "assistant" ? "Assistant" : name === "settings" ? "Settings" : "Overview";
   if (name === "assistant") setTimeout(() => input.focus(), 30);
+  if (name === "settings") loadSettings();
   closeDrawer();
 }
 document.querySelectorAll("[data-nav]").forEach((n) => n.onclick = () => showView(n.dataset.nav));
@@ -392,3 +393,80 @@ showSkeletons();   // paint placeholders on first frame, before /auth/me resolve
   } catch { showGate(""); }
 })();
 setInterval(() => { if (!$("#gate").classList.contains("flex")) loadStatus(); }, 15_000);
+
+// ─── settings panel ──────────────────────────────────────────────────────────
+const SET = {};
+["EmailEnabled","EmailTo","EmailFrom","EmailMethod","DigestHour","SmtpHost","SmtpPort","SmtpUser","SmtpPass","ResendKey","DiskPct","MemPct","CertDays","CertDomains","MonitoredUnits","AiBackend","AiBaseUrl","AiModel","AiApiKey","ClaudeModel"].forEach((k) => (SET[k] = $("#set" + k)));
+
+function setMsg(t, bad) { const m = $("#setMsg"); if (!m) return; m.textContent = t || ""; m.classList.toggle("bad", !!bad); m.classList.toggle("good", !!t && !bad); }
+function setGroups() {
+  $("#setSmtpGroup").classList.toggle("hidden", SET.EmailMethod.value !== "smtp");
+  $("#setResendGroup").classList.toggle("hidden", SET.EmailMethod.value !== "resend");
+  $("#setOpenaiGroup").classList.toggle("hidden", SET.AiBackend.value !== "openai");
+  $("#setClaudeGroup").classList.toggle("hidden", SET.AiBackend.value !== "claude-code");
+}
+if (SET.EmailMethod) SET.EmailMethod.onchange = setGroups;
+if (SET.AiBackend) SET.AiBackend.onchange = setGroups;
+
+async function loadSettings() {
+  setMsg("");
+  try {
+    const r = await fetch("/settings");
+    if (!r.ok) return setMsg(r.status === 401 ? "Not signed in." : "Failed to load settings.", true);
+    const d = await r.json();
+    SET.EmailEnabled.checked = !!d.email.enabled;
+    SET.EmailTo.value = d.email.to || "";
+    SET.EmailFrom.value = d.email.from || "";
+    SET.EmailMethod.value = d.email.method || "smtp";
+    SET.DigestHour.value = d.alerts.digestHour >= 0 ? d.alerts.digestHour : "";
+    SET.SmtpHost.value = d.email.smtpHost || "";
+    SET.SmtpPort.value = d.email.smtpPort || "";
+    SET.SmtpUser.value = d.email.smtpUser || "";
+    SET.SmtpPass.value = d.email.smtpPass || "";
+    SET.ResendKey.value = d.email.resendKey || "";
+    SET.DiskPct.value = d.alerts.diskPct;
+    SET.MemPct.value = d.alerts.memPct;
+    SET.CertDays.value = d.alerts.certDays;
+    SET.CertDomains.value = (d.alerts.certDomains || []).join(", ");
+    SET.MonitoredUnits.value = (d.monitoredUnits || []).join(", ");
+    SET.AiBackend.value = d.ai.backend || "openai";
+    SET.AiBaseUrl.value = d.ai.baseUrl || "";
+    SET.AiModel.value = d.ai.model || "";
+    SET.AiApiKey.value = d.ai.apiKey || "";
+    SET.ClaudeModel.value = d.ai.claudeModel || "";
+    setGroups();
+  } catch (e) { setMsg("Failed to load: " + e.message, true); }
+}
+
+function collectSettings() {
+  return {
+    email: {
+      enabled: SET.EmailEnabled.checked, to: SET.EmailTo.value.trim(), from: SET.EmailFrom.value.trim(), method: SET.EmailMethod.value,
+      smtpHost: SET.SmtpHost.value.trim(), smtpPort: SET.SmtpPort.value.trim(), smtpUser: SET.SmtpUser.value.trim(),
+      smtpPass: SET.SmtpPass.value, resendKey: SET.ResendKey.value,
+    },
+    alerts: { diskPct: SET.DiskPct.value, memPct: SET.MemPct.value, digestHour: SET.DigestHour.value.trim(), certDays: SET.CertDays.value, certDomains: SET.CertDomains.value },
+    monitoredUnits: SET.MonitoredUnits.value,
+    ai: { backend: SET.AiBackend.value, baseUrl: SET.AiBaseUrl.value.trim(), model: SET.AiModel.value.trim(), apiKey: SET.AiApiKey.value, claudeModel: SET.ClaudeModel.value.trim() },
+  };
+}
+async function saveSettings() {
+  const r = await fetch("/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
+  if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || "save failed (" + r.status + ")"); }
+}
+
+if ($("#setSave")) $("#setSave").onclick = async () => {
+  const b = $("#setSave"); b.disabled = true; setMsg("Saving…");
+  try { await saveSettings(); await loadSettings(); setMsg("Saved ✓"); } catch (e) { setMsg(e.message, true); }
+  b.disabled = false;
+};
+if ($("#setTestEmail")) $("#setTestEmail").onclick = async () => {
+  setMsg("Saving + sending test…");
+  try { await saveSettings(); const r = await fetch("/settings/test-email", { method: "POST" }); if (r.ok) setMsg("Test email sent ✓ — check your inbox (and spam the first time)."); else { const d = await r.json().catch(() => ({})); setMsg("Test failed: " + (d.error || r.status), true); } }
+  catch (e) { setMsg(e.message, true); }
+};
+if ($("#setReportNow")) $("#setReportNow").onclick = async () => {
+  setMsg("Saving + sending report…");
+  try { await saveSettings(); const r = await fetch("/settings/report-now", { method: "POST" }); if (r.ok) setMsg("Report sent ✓"); else { const d = await r.json().catch(() => ({})); setMsg("Report failed: " + (d.error || r.status), true); } }
+  catch (e) { setMsg(e.message, true); }
+};

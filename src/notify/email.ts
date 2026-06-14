@@ -6,7 +6,7 @@
 // blacklisted, port 25 is often blocked, and you'd need SPF/DKIM/DMARC/PTR —
 // mail would just land in spam. Relaying through a real provider is reliable.
 
-import { config } from "../config.ts";
+import { getEmail } from "../settings.ts";
 
 export interface MailFields {
   from: string;
@@ -101,13 +101,13 @@ export async function smtpSend(o: { host: string; port: number; user: string; pa
 
 // ── Config-driven send (used by the watcher) ────────────────────────────────
 export async function sendEmail(subject: string, text: string): Promise<{ ok: boolean; error?: string }> {
-  const e = config.email;
+  const e = getEmail();
   if (!e.enabled || !e.to) return { ok: false, error: "email not configured" };
   try {
     if (e.method === "resend") {
       await resendSend(e.resendKey, { from: e.from || "ServerMind <onboarding@resend.dev>", to: e.to, subject, text });
     } else {
-      await smtpSend({ host: e.smtp.host, port: e.smtp.port, user: e.smtp.user, pass: e.smtp.pass, from: e.from || e.smtp.user, to: e.to, subject, text });
+      await smtpSend({ host: e.smtpHost, port: e.smtpPort, user: e.smtpUser, pass: e.smtpPass, from: e.from || e.smtpUser, to: e.to, subject, text });
     }
     return { ok: true };
   } catch (err) {

@@ -14,6 +14,9 @@ import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
 import { isArmed, setArmed, armState } from "./arm.ts";
 import { startWatcher } from "./notify/watcher.ts";
+import { settingsForApi, updateSettings } from "./settings.ts";
+import { sendEmail } from "./notify/email.ts";
+import { buildDigest } from "./notify/report.ts";
 
 const MAX_MESSAGE_CHARS = 16_000;
 const MAX_BODY_BYTES = 256 * 1024;
@@ -152,6 +155,36 @@ app.get("/status", async (c) => {
   } catch (e) {
     console.error("[status] error:", (e as Error).message); // detail to logs, not the client
     return c.json({ error: "failed to collect status" }, 500);
+  }
+});
+
+// ─── Dashboard settings (authenticated; secrets masked in responses) ───────────
+// Only the safe subset is editable here — auth, the service allowlist, PM2 sudo
+// and the network bind stay in .env. Updates apply live AND persist to .env.
+app.use("/settings", bodyLimit, requireAuth);
+app.use("/settings/*", requireAuth);
+
+app.get("/settings", (c) => c.json(settingsForApi()));
+
+app.post("/settings", async (c) => {
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
+  const r = await updateSettings(body, clientKey(c)); // ip recorded in the audit log
+  return r.ok ? c.json(settingsForApi()) : c.json({ error: r.error }, 400);
+});
+
+app.post("/settings/test-email", async (c) => {
+  const r = await sendEmail("ServerMind test email ✓", "This is a test from ServerMind Settings.\nIf you got this, email reports & alerts are working.\n\n— ServerMind");
+  return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+});
+
+app.post("/settings/report-now", async (c) => {
+  try {
+    const digest = buildDigest(await getStatusSnapshot());
+    const r = await sendEmail(digest.subject, digest.body);
+    return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 500);
   }
 });
 

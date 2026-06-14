@@ -5,7 +5,7 @@
 // Ollama, etc. Selected when AI_BACKEND=openai. Emits the same StreamEvent shape
 // as the Claude Code backend, so the UI and routes don't care which is active.
 
-import { config } from "../config.ts";
+import { getAI } from "../settings.ts";
 import { dispatchTool, isMutatingCall } from "../tools/index.ts";
 import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
 
@@ -102,8 +102,9 @@ export async function runChat(
   emit: (e: StreamEvent) => void,
   opts: ChatOptions = {},
 ): Promise<void> {
-  if (!config.aiBaseUrl || !config.aiModel) {
-    emit({ type: "error", message: "AI backend not configured — set AI_BASE_URL and AI_MODEL (and AI_API_KEY) in .env" });
+  const ai = getAI();
+  if (!ai.baseUrl || !ai.model) {
+    emit({ type: "error", message: "AI backend not configured — set the base URL and model in Settings or .env" });
     return;
   }
 
@@ -119,15 +120,15 @@ export async function runChat(
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       if (opts.signal?.aborted) return;
 
-      const res = await fetch(`${config.aiBaseUrl}/chat/completions`, {
+      const res = await fetch(`${ai.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(config.aiApiKey ? { authorization: `Bearer ${config.aiApiKey}` } : {}),
+          ...(ai.apiKey ? { authorization: `Bearer ${ai.apiKey}` } : {}),
         },
         signal: opts.signal,
         body: JSON.stringify({
-          model: config.aiModel,
+          model: ai.model,
           messages,
           tools: TOOLS,
           tool_choice: "auto",

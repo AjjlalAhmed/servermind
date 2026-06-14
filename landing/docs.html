@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Microsoft Clarity (analytics) -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "x6od5uwr96");
+</script>
+
 <title>ServerMind Setup Guide — Install on Your Linux Server</title>
 <meta name="description" content="How to install ServerMind on a Linux VPS: requirements, the one-command install, choosing your AI backend (Gemini, Claude, Ollama), accessing it with or without a domain, and troubleshooting." />
 <meta name="theme-color" content="#0B0A07" />
@@ -269,7 +279,7 @@ servermind.example.com {
           <li><strong>Alerts</strong> when disk or memory crosses your threshold, a monitored service goes down, or a <strong>TLS certificate is near expiry</strong> — each with a cooldown so it never spams you.</li>
         </ul>
         <h3>Enable it</h3>
-        <p>Run the wizard and complete <strong>step 9 · Email reports &amp; alerts</strong>:</p>
+        <p>Two ways: the <strong>Settings panel in the dashboard</strong> (gear icon → Notifications &amp; alerts — edits apply live, no restart), or the setup wizard's <strong>step 9</strong>:</p>
         <div class="codeblock">
           <pre><code><span class="prompt">$</span> cd ~/servermind &amp;&amp; bun run setup</code></pre>
           <button class="copy-btn" data-copy="cd ~/servermind && bun run setup" aria-label="Copy command">
@@ -311,11 +321,14 @@ servermind.example.com {
         <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
+          <li><strong>No database.</strong> Settings live in a JSON file, sessions in memory — there is no SQL/ORM, so <strong>SQL injection has nothing to attack</strong>.</li>
           <li><strong>Mutations gated.</strong> Restart/stop/start are refused unless you arm them via a server-side switch the model can't set itself — so prompt injection in tool output can't trigger changes.</li>
           <li><strong>Auth.</strong> Password + TOTP 2FA, argon2id hashing, HttpOnly / SameSite=Strict cookies, brute-force lockout, rate limiting, strict CSP.</li>
-          <li><strong>Yours.</strong> Runs entirely on your box; secrets stay in a local <code>.env</code> (chmod 600); nothing is sent to the project's authors.</li>
+          <li><strong>Settings &amp; secrets.</strong> The dashboard edits a safe subset (email, alerts, monitoring, AI) — never auth, the service allowlist, or PM2 access. Writes are schema-validated and atomic; secret fields are <strong>encrypted at rest (AES-256-GCM)</strong> and masked in the API, never returned to the browser.</li>
+          <li><strong>Yours.</strong> Runs entirely on your box; secrets stay in local files (chmod 600); nothing is sent to the project's authors.</li>
         </ul>
-        <div class="callout warn"><span class="ct">Maintainer note</span>If you use the Claude Code backend, pin the <code>claude</code> CLI version on the host rather than auto-upgrading — the built-in tool deny-list is matched to known versions. Found a gap? See the project's <a href="https://github.com/AjjlalAhmed/servermind/blob/main/SECURITY.md" target="_blank" rel="noopener">security policy</a>.</div>
+        <div class="callout note"><span class="ct">Full threat model</span>An honest breakdown of what's structurally prevented and the real residual risks (running as root, encryption-at-rest limits, dependencies) lives in <a href="https://github.com/AjjlalAhmed/servermind/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.</div>
+        <div class="callout warn"><span class="ct">Maintainer note</span>If you use the Claude Code backend, pin the <code>claude</code> CLI version on the host rather than auto-upgrading — the built-in tool deny-list is matched to known versions.</div>
       </section>
 
       <!-- Troubleshooting -->

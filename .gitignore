@@ -14,3 +14,6 @@ logs/
 bun.lockb
 .DS_Store
 dist/
+
+# runtime settings store (encrypted secrets) + audit log
+data/

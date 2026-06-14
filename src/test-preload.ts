@@ -8,3 +8,5 @@ export const TEST_TOTP_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"; // RFC test 
 
 process.env.SERVERMIND_PASSWORD_HASH ||= await Bun.password.hash(TEST_PASSWORD, "argon2id");
 process.env.SERVERMIND_TOTP_SECRET ||= TEST_TOTP_SECRET;
+// A settings encryption key so the settings service never bootstraps one into .env during tests.
+process.env.SETTINGS_KEY ||= "dGVzdC1rZXktMzItYnl0ZXMtMDAwMDAwMDAwMDAwMDA=";

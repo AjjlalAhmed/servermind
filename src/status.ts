@@ -4,6 +4,7 @@
 
 import * as os from "node:os";
 import { config } from "./config.ts";
+import { getMonitoredUnits } from "./settings.ts";
 import { exec } from "./tools/exec.ts";
 import { pm2Action } from "./tools/pm2.ts";
 import { redisProbe } from "./tools/redis.ts";
@@ -81,7 +82,7 @@ export async function getStatusSnapshot(): Promise<StatusSnapshot> {
     pm2Action("list"),
     redisProbe(),
     mysqlPing(),
-    Promise.all(config.monitoredUnits.map(systemctlActive)),
+    Promise.all(getMonitoredUnits().map(systemctlActive)),
   ]);
 
   const services: Record<string, string> = {};

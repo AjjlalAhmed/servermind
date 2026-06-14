@@ -2,7 +2,7 @@
 // and (b) a human-readable daily digest. Pure functions — no I/O — so they're
 // easy to reason about and test.
 
-import { config } from "../config.ts";
+import { getAlerts } from "../settings.ts";
 import type { StatusSnapshot } from "../status.ts";
 
 export interface Alert {
@@ -15,18 +15,18 @@ export function evaluateAlerts(s: StatusSnapshot): Alert[] {
   const host = s.host.hostname || "server";
   const out: Alert[] = [];
 
-  if (s.metrics.disk.usedPct >= config.alerts.diskPct) {
+  if (s.metrics.disk.usedPct >= getAlerts().diskPct) {
     out.push({
       key: "disk",
       subject: `⚠️ ${host}: disk ${s.metrics.disk.usedPct}% full`,
-      body: `Disk usage on ${s.metrics.disk.mount} is ${s.metrics.disk.usedPct}% (alert threshold ${config.alerts.diskPct}%).`,
+      body: `Disk usage on ${s.metrics.disk.mount} is ${s.metrics.disk.usedPct}% (alert threshold ${getAlerts().diskPct}%).`,
     });
   }
-  if (s.metrics.memory.usedPct >= config.alerts.memPct) {
+  if (s.metrics.memory.usedPct >= getAlerts().memPct) {
     out.push({
       key: "mem",
       subject: `⚠️ ${host}: memory ${s.metrics.memory.usedPct}%`,
-      body: `Memory usage is ${s.metrics.memory.usedPct}% (alert threshold ${config.alerts.memPct}%).`,
+      body: `Memory usage is ${s.metrics.memory.usedPct}% (alert threshold ${getAlerts().memPct}%).`,
     });
   }
   for (const [unit, state] of Object.entries(s.services)) {

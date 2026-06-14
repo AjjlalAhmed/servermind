@@ -37,6 +37,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 14.06A2 2 0 0 0 8.5 12.62L2.37 11.04a.5.5 0 0 1 0-.97L8.5 8.5a2 2 0 0 0 1.44-1.44L11.52.93a.5.5 0 0 1 .96 0l1.58 6.13A2 2 0 0 0 15.5 8.5l6.13 1.58a.5.5 0 0 1 0 .96L15.5 12.62a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
         Assistant
       </div>
+      <div class="nav-item" data-nav="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </div>
     </nav>
 
     <div class="side-status">
@@ -95,6 +99,68 @@
               <tbody id="pm2Body"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section data-view="settings" class="hidden">
+      <div class="settings">
+        <p class="set-intro">Edit live — changes apply immediately and are saved to <code>.env</code>. Auth, the service allowlist and PM2 access stay in <code>.env</code> for security.</p>
+
+        <div class="section-title">Notifications &amp; alerts</div>
+        <div class="panel set-panel">
+          <label class="set-toggle"><input type="checkbox" id="setEmailEnabled" /> <span>Send email reports &amp; alerts</span></label>
+          <div class="set-grid">
+            <label class="set-field"><span>Send reports to</span><input class="field" id="setEmailTo" placeholder="you@example.com" /></label>
+            <label class="set-field"><span>From address</span><input class="field" id="setEmailFrom" placeholder="ServerMind &lt;you@example.com&gt;" /></label>
+            <label class="set-field"><span>Send via</span><select class="field" id="setEmailMethod"><option value="smtp">SMTP (Gmail / your relay)</option><option value="resend">Resend (API key)</option></select></label>
+            <label class="set-field"><span>Daily report hour <span class="set-hint">0–23, blank = off</span></span><input class="field" id="setDigestHour" placeholder="8" /></label>
+          </div>
+          <div class="set-grid" id="setSmtpGroup">
+            <label class="set-field"><span>SMTP host</span><input class="field" id="setSmtpHost" placeholder="smtp.gmail.com" /></label>
+            <label class="set-field"><span>SMTP port</span><input class="field" id="setSmtpPort" placeholder="465" /></label>
+            <label class="set-field"><span>SMTP username</span><input class="field" id="setSmtpUser" placeholder="you@gmail.com" /></label>
+            <label class="set-field"><span>SMTP password <span class="set-hint">Gmail app password, no spaces</span></span><input class="field" type="password" id="setSmtpPass" autocomplete="off" placeholder="••••••••" /></label>
+          </div>
+          <div class="set-grid hidden" id="setResendGroup">
+            <label class="set-field"><span>Resend API key</span><input class="field" type="password" id="setResendKey" autocomplete="off" placeholder="re_…" /></label>
+          </div>
+          <div class="set-grid">
+            <label class="set-field"><span>Alert when disk % above</span><input class="field" id="setDiskPct" placeholder="90" /></label>
+            <label class="set-field"><span>Alert when memory % above</span><input class="field" id="setMemPct" placeholder="90" /></label>
+            <label class="set-field"><span>Warn when TLS cert within days</span><input class="field" id="setCertDays" placeholder="14" /></label>
+            <label class="set-field"><span>Cert domains <span class="set-hint">comma-separated</span></span><input class="field" id="setCertDomains" placeholder="example.com" /></label>
+          </div>
+          <div class="set-actions">
+            <button class="btn ghost" id="setTestEmail" type="button">Send test email</button>
+            <button class="btn ghost" id="setReportNow" type="button">Send report now</button>
+          </div>
+        </div>
+
+        <div class="section-title">Monitoring</div>
+        <div class="panel set-panel">
+          <label class="set-field"><span>Services shown on the dashboard <span class="set-hint">comma-separated systemd units</span></span><input class="field" id="setMonitoredUnits" placeholder="nginx,caddy,mysql,mariadb,redis-server" /></label>
+        </div>
+
+        <div class="section-title">AI backend</div>
+        <div class="panel set-panel">
+          <div class="set-grid">
+            <label class="set-field"><span>Backend</span><select class="field" id="setAiBackend"><option value="openai">OpenAI-compatible API</option><option value="claude-code">Claude Code (subscription)</option></select></label>
+          </div>
+          <div class="set-grid" id="setOpenaiGroup">
+            <label class="set-field"><span>Base URL</span><input class="field" id="setAiBaseUrl" placeholder="https://api.x.ai/v1" /></label>
+            <label class="set-field"><span>Model</span><input class="field" id="setAiModel" placeholder="grok-3" /></label>
+            <label class="set-field"><span>API key</span><input class="field" type="password" id="setAiApiKey" autocomplete="off" placeholder="••••••••" /></label>
+          </div>
+          <div class="set-grid hidden" id="setClaudeGroup">
+            <label class="set-field"><span>Claude model</span><input class="field" id="setClaudeModel" placeholder="claude-sonnet-4-6" /></label>
+          </div>
+        </div>
+
+        <div class="set-bar">
+          <button class="modal-btn" id="setSave" type="button">Save changes</button>
+          <span class="set-msg" id="setMsg"></span>
         </div>
       </div>
     </section>

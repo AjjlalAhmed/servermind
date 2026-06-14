@@ -4,7 +4,7 @@
 // never treated as an alert (it could be transient) — just logged.
 
 import tls from "node:tls";
-import { config } from "../config.ts";
+import { getAlerts } from "../settings.ts";
 import type { Alert } from "./report.ts";
 
 export function certDaysLeft(host: string, port = 443): Promise<number> {
@@ -24,11 +24,11 @@ export function certDaysLeft(host: string, port = 443): Promise<number> {
 
 export async function evaluateCertAlerts(): Promise<Alert[]> {
   const out: Alert[] = [];
-  for (const host of config.alerts.certDomains) {
+  for (const host of getAlerts().certDomains) {
     if (!host) continue;
     try {
       const days = await certDaysLeft(host);
-      if (days <= config.alerts.certDays) {
+      if (days <= getAlerts().certDays) {
         out.push({
           key: `cert:${host}`,
           subject: days < 0
@@ -36,7 +36,7 @@ export async function evaluateCertAlerts(): Promise<Alert[]> {
             : `🔐 ${host}: TLS certificate expires in ${days} day(s)`,
           body: days < 0
             ? `The TLS certificate for ${host} expired ${-days} day(s) ago — renew it now.`
-            : `The TLS certificate for ${host} expires in ${days} day(s) (alert threshold ${config.alerts.certDays}).`,
+            : `The TLS certificate for ${host} expires in ${days} day(s) (alert threshold ${getAlerts().certDays}).`,
         });
       }
     } catch (e) {
