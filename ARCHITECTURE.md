@@ -1,9 +1,12 @@
 # ServerMind — Multi-Server Architecture
 
-> Status: **design / roadmap.** Today ServerMind runs standalone (one instance
-> per box). This document specifies the v2 "fleet" mode — manage many servers
-> from **one controller, one login, all reports in one place** — and the plan to
-> build it without breaking the single-server experience.
+> Status: **largely built.** Fleet mode (controller + remote agents) and an
+> optional self-hosted **WireGuard mesh** are implemented and validated end to end
+> — see `install.sh --mesh`, `src/fleet/*`, and the container scenarios under
+> `test/mesh/` (including `fresh-vps.sh`, which runs the real installer on fresh
+> boxes). This document is the design of record; a few items remain on the roadmap
+> in §10 (per-agent credential rotation, unified alerts/digest, mTLS option).
+> Single-server stays the zero-config default, unchanged.
 
 ---
 

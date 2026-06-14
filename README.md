@@ -170,46 +170,51 @@ bun run typecheck
 bun test
 ```
 
-## Roadmap
+## Multi-server (fleet + self-hosted mesh)
 
-**Next goal — manage a fleet of servers from one place** (agent + controller).
-
-Today ServerMind runs one instance per box. The next step is multi-server, using
-the standard agent/controller model (how Datadog, Netdata, Portainer work):
+Manage many servers from one controller, one login — using the standard
+agent/controller model (how Datadog, Netdata, Portainer work), with an optional
+**self-hosted WireGuard mesh** (no third party) securing the controller↔agent link.
 
 ```
-            Controller (Docker container — manages no host)
-            dashboard · chat · auth · server registry/router
-                 ▲            ▲            ▲   (agents dial OUT)
-            ┌────┴───┐   ┌────┴───┐   ┌────┴───┐
-            │ agent  │   │ agent  │   │ agent  │   one lightweight agent per host
-            │ vps 1  │   │ vps 2  │   │ vps 3  │   (today's execution core)
-            └────────┘   └────────┘   └────────┘
+   YOU ─browser─► Controller (UI · chat · auth · registry · enroll · hub)
+                       ▲            ▲            ▲   (agents dial OUT over WireGuard)
+                  ┌────┴───┐   ┌────┴───┐   ┌────┴───┐
+                  │ agent  │   │ agent  │   │ agent  │   one native agent per host
+                  │ vps 1  │   │ vps 2  │   │ vps 3  │   (read-only allowlist + arm gate)
+                  └────────┘   └────────┘   └────────┘
 ```
 
-- **Agent on each server** — the current execution core: read-only allowlist,
-  the tools, and the arm switch, all enforced **locally on each box**.
-- **One controller** (a good fit for Docker, since it manages no host) — the UI,
-  chat, auth, and a server picker that routes the AI's tool calls to the chosen
-  agent.
-- **Agents dial *out*** to the controller (outbound websocket / reverse tunnel),
-  so no inbound ports need opening on the VPSes.
+**Set it up (one installer, role chosen by flags):**
+```bash
+# Controller (your main box) — fleet on, WireGuard mesh on:
+curl -fsSL https://servermind.dev/install.sh | bash -s -- --mesh
 
-**One login, every server equal.** You set up password + TOTP **once on the
-controller** — agents have no human login (they authenticate with revocable
-per-agent tokens, so a fleet deploy via CI needs no per-server auth). No roles or
-labels; every server runs the same agent and shows up in one fleet dashboard with
-unified reports and a single daily digest.
+# Each VPS — the exact command the Fleet tab's "Add server" button generates:
+curl -fsSL https://servermind.dev/install.sh | bash -s -- \
+  --controller wss://<controller>/fleet/agent --token <token> --mesh
+```
+The agent generates its own WireGuard keypair locally (its **private key never
+leaves the box**), enrolls with the controller (public key only), brings up its
+tunnel, and connects over the mesh. Drop `--mesh` on both sides to run the plain
+`wss`-over-the-internet topology instead.
 
-Security stays intact because the **allowlist + arm switch live on each agent**,
-not the controller — so even a compromised controller can't get a shell or bypass
-the arm gate; it can only ask an agent to run its own vetted tools. **Single-server
-mode stays the zero-config default** and is never broken by fleet features.
+- **Agents dial *out*** — no inbound ports on managed servers. The **controller**
+  needs a reachable address and, for the mesh, **UDP 51820 open** (the installer
+  opens it via ufw/firewalld; a cloud security-group rule is still on you).
+- **One login, every server equal.** Password + TOTP once, on the controller.
+- **Safety stays distributed** — the read-only allowlist + arm switch run **on
+  each agent**, and the mesh reload is gated to one tightly-scoped `sudo wg` rule,
+  so even a compromised controller can't get a shell. **Single-server stays the
+  zero-config default**, unchanged.
+- **Remote-server chat** needs an OpenAI-compatible backend (Claude Code runs
+  tools locally only).
 
-> Full design + phased build plan: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
-> (Note: the *single-box* app isn't meant to run in Docker — managing a host from
-> inside a container fights container isolation; it's the *controller* that belongs
-> in Docker, with native agents on each host.)
+> Full design: **[ARCHITECTURE.md](ARCHITECTURE.md)**. The mesh is validated end
+> to end (unit tests + container scenarios incl. a fresh-VPS, real-installer run):
+> `test/mesh/run.sh`, or `test/mesh/fresh-vps.sh` for the full two-box flow.
+> (Run the *controller* in Docker if you like; **agents are always native** —
+> a containerized agent can't see the host's systemd/PM2/disk.)
 
 ## License
 
