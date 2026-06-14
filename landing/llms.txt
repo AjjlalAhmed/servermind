@@ -35,6 +35,10 @@ ServerMind can email a daily health report and send alerts when disk or memory c
 - **Is it safe to let AI control my server?** Yes — read-only allowlist plus a server-side arm switch; destructive commands are impossible.
 - **Which AI should I use?** Gemini (free), Claude (best quality), Ollama (private/offline), or Groq (fast/free).
 
+## Alternatives & comparison
+
+ServerMind is comparable to OpenClaw (an autonomous agent over Telegram/Discord), Teleport Assist (enterprise access platform with AI chat), Portainer MCP (Docker-focused, via an MCP client), Netdata (heavy monitoring platform with AI chat), Cockpit/Webmin (web config dashboards without AI), and Warp (an AI terminal on your laptop). ServerMind's distinguishing combination is: self-hosted + web dashboard + conversational AI + safety guardrails (a server-side arm switch plus a read-only command allowlist) + no domain required. Full side-by-side comparison: https://servermind.dev/compare.html
+
 ## Links
 
 - Home: https://servermind.dev/

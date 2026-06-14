@@ -710,3 +710,25 @@ h1 {
   .req-grid { grid-template-columns: 1fr; }
   .doc-hero { padding: 44px 0 24px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Comparison page — table + per-tool blocks
+   ══════════════════════════════════════════════════════════════ */
+.cmp-wrap { max-width: 760px; overflow-x: auto; margin: 0 0 10px; border: 1px solid var(--border); border-radius: 12px; -webkit-overflow-scrolling: touch; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 680px; }
+.cmp-table th, .cmp-table td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.cmp-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-faint); font-weight: 600; background: var(--surface); }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+.cmp-table td:first-child, .cmp-table th:first-child { font-weight: 500; color: var(--text); white-space: normal; min-width: 132px; }
+.cmp-table .yes { color: var(--green); font-weight: 600; }
+.cmp-table .no { color: var(--text-faint); }
+.cmp-table .mid { color: var(--amber); }
+.cmp-table tr.me td { background: var(--accent-soft); }
+.cmp-table tr.me td:first-child { color: var(--accent-2); font-weight: 700; }
+.cmp-note { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 30px; }
+.cmp-cat { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--accent-2); margin: 44px 0 6px; }
+.prose h3.cmp-tool { font-size: 18px; margin: 22px 0 6px; }
+.prose .cmp-vs { color: var(--text-dim); font-size: 14.5px; line-height: 1.66; }
+.prose .cmp-vs strong { color: var(--text); }
+.prose .cmp-diff { color: var(--text-dim); font-size: 14.5px; line-height: 1.66; margin-top: 6px; }
+.prose .cmp-diff b { color: var(--accent-2); font-weight: 600; }
