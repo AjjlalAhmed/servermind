@@ -21,6 +21,10 @@
 
 PM2 processes, Redis, MySQL/MariaDB, Nginx, Caddy, systemd services, Docker, fail2ban, plus disk, memory, ports, and logs.
 
+## Email reports & alerts
+
+ServerMind can email a daily health report and send alerts when disk or memory crosses a threshold, a monitored service goes down, or a TLS certificate is near expiry. It relays through SMTP (e.g. a Gmail app password) or the Resend API — it does not run its own mail server. Configured in the setup wizard.
+
 ## Common questions
 
 - **Is it free?** Yes — MIT open-source; free with the Google Gemini tier.

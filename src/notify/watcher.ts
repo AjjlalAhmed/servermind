@@ -6,22 +6,33 @@
 import { config, emailConfigured } from "../config.ts";
 import { getStatusSnapshot } from "../status.ts";
 import { sendEmail } from "./email.ts";
-import { evaluateAlerts, buildDigest } from "./report.ts";
+import { evaluateAlerts, buildDigest, type Alert } from "./report.ts";
+import { evaluateCertAlerts } from "./cert.ts";
 
 const lastAlertAt = new Map<string, number>(); // alert key → epoch ms
 let lastDigestDay = ""; // YYYY-MM-DD of the last digest sent
+let lastCertCheck = 0; // epoch ms of the last TLS-cert check
 
 const CHECK_INTERVAL_MS = 60_000;
 const FIRST_CHECK_DELAY_MS = 30_000; // let the server settle before the first run
+const CERT_CHECK_INTERVAL_MS = 6 * 3_600_000; // certs change slowly — check every 6h
 
 async function tick(): Promise<void> {
   try {
     const snap = await getStatusSnapshot();
 
-    // ── threshold alerts (cooldown-gated) ──
+    // ── alerts (cooldown-gated) ──
     const cooldownMs = Math.max(1, config.alerts.cooldownMin) * 60_000;
     const now = Date.now();
-    for (const a of evaluateAlerts(snap)) {
+
+    const alerts: Alert[] = evaluateAlerts(snap);
+    // TLS-cert checks do a handshake, so run them on a slow throttle, not every minute.
+    if (config.alerts.certDomains.length && now - lastCertCheck >= CERT_CHECK_INTERVAL_MS) {
+      lastCertCheck = now;
+      alerts.push(...(await evaluateCertAlerts()));
+    }
+
+    for (const a of alerts) {
       if (now - (lastAlertAt.get(a.key) ?? 0) < cooldownMs) continue;
       const r = await sendEmail(a.subject, `${a.body}\n\n— ServerMind`);
       if (r.ok) lastAlertAt.set(a.key, now);

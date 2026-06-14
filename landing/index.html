@@ -55,8 +55,9 @@
         "Read-only command allowlist — no raw shell, command injection is structurally impossible",
         "Server-side \"arm\" switch required before any restart, stop or start",
         "Password + TOTP two-factor authentication, brute-force lockout, strict CSP",
-        "Bring your own AI: Google Gemini (free), Claude subscription, Groq, OpenRouter, or local Ollama",
-        "Access with no domain via SSH tunnel or Tailscale; optional HTTPS domain via Caddy or Nginx"
+        "Bring your own AI: Google Gemini (free), Claude subscription, Groq, xAI Grok, OpenRouter, or local Ollama",
+        "Access with no domain via SSH tunnel or Tailscale; optional HTTPS domain via Caddy or Nginx",
+        "Email daily health reports and alerts (high disk/memory, downed service, TLS cert expiry) via SMTP or Resend"
       ],
       "author": { "@id": "https://servermind.dev/#org" },
       "publisher": { "@id": "https://servermind.dev/#org" }
@@ -368,6 +369,11 @@
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
           <h3>One command to run</h3>
           <p><code>curl | bash</code>, then a wizard handles auth, your AI, and services. Open-source — fork it, audit it, own it.</p>
+        </article>
+        <article class="card reveal">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="m22 7-10 5L2 7"/></svg></span>
+          <h3>Reports &amp; alerts</h3>
+          <p>A daily health report by email, plus instant alerts on high disk/memory, a downed service, or a TLS cert about to expire. It watches so you don't have to.</p>
         </article>
       </div>
     </div>

@@ -115,6 +115,10 @@ export const config = {
     cooldownMin: Number(optional("ALERT_COOLDOWN_MIN", "60")),
     // hour of day (server local time, 0-23) to send the daily report; -1 = off.
     digestHour: optional("DIGEST_HOUR", "") === "" ? -1 : Number(optional("DIGEST_HOUR", "")),
+    // Warn when a TLS cert is within this many days of expiry. Defaults to
+    // checking your own SERVERMIND_DOMAIN; override with ALERT_CERT_DOMAINS.
+    certDays: Number(optional("ALERT_CERT_DAYS", "14")),
+    certDomains: list("ALERT_CERT_DOMAINS", optional("SERVERMIND_DOMAIN", "") ? [optional("SERVERMIND_DOMAIN", "")] : []),
   },
 } as const;
 
