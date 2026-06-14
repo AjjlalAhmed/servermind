@@ -75,5 +75,20 @@ if command -v visudo >/dev/null 2>&1; then
   visudo -cf "$SUDOERS" >/dev/null || { rm -f "$SUDOERS"; die "generated sudoers rule failed validation."; }
 fi
 
+# ── 5. open the WireGuard UDP port on the host firewall (best-effort) ────────────
+# Agents dial the controller's UDP $WG_PORT for the WireGuard handshake. If a host
+# firewall (ufw/firewalld) is active, open it. NOTE: a cloud provider's security
+# group / network ACL is separate — you must allow UDP $WG_PORT there too.
+WG_PORT="${MESH_LISTEN_PORT:-51820}"
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi active; then
+  ufw allow "$WG_PORT/udp" >/dev/null 2>&1 && log "opened UDP $WG_PORT (ufw)" || log "could not open UDP $WG_PORT via ufw — do it manually."
+elif command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+  firewall-cmd --permanent --add-port="$WG_PORT/udp" >/dev/null 2>&1 && firewall-cmd --reload >/dev/null 2>&1 \
+    && log "opened UDP $WG_PORT (firewalld)" || log "could not open UDP $WG_PORT via firewalld — do it manually."
+else
+  log "no active ufw/firewalld detected — ensure UDP $WG_PORT is reachable (host firewall + cloud security group)."
+fi
+
 log "controller mesh prerequisites ready (user=$SM_USER, iface=$WG_IFACE)"
 log "the app brings up $WG_IFACE on boot; enroll agents from the Fleet tab."
+log "REMINDER: open UDP $WG_PORT in your cloud provider's security group/firewall too."

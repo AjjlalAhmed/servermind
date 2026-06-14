@@ -240,14 +240,27 @@ if [ -n "$MESH" ]; then
   SM_USER="${SERVERMIND_USER:-$(id -un)}"
   $SUDO env SERVERMIND_USER="$SM_USER" bash "$DIR/scripts/setup-mesh-controller.sh" || die "mesh provisioning failed."
   set_env MESH_ENABLED 1
+  # Agents reach the controller over the mesh (and the bootstrap enroll hop), so
+  # it must NOT stay bound to loopback. Bind all interfaces unless the operator
+  # already chose a specific reachable address (e.g. a Tailscale IP).
+  CUR_BIND="$(get_env BIND_HOST)"
+  if [ -z "$CUR_BIND" ] || [ "$CUR_BIND" = "127.0.0.1" ] || [ "$CUR_BIND" = "localhost" ]; then
+    set_env BIND_HOST 0.0.0.0
+    warn "Mesh: bound to 0.0.0.0 so agents can connect — keep the UI protected (login + a firewall, Tailscale, or HTTPS proxy)."
+  fi
   [ -n "${MESH_CIDR:-}" ] && set_env MESH_CIDR "$MESH_CIDR"
-  # Endpoint agents dial: explicit MESH_ENDPOINT, else <domain>:51820 if a domain
-  # is configured. Agents need this to reach the controller's UDP port.
+  # Endpoint agents dial for the WireGuard handshake. Precedence: explicit
+  # MESH_ENDPOINT → <domain>:51820 → auto-detected public IP → give up + warn.
   MESH_EP="${MESH_ENDPOINT:-}"
   [ -z "$MESH_EP" ] && [ -n "$(get_env SERVERMIND_DOMAIN)" ] && MESH_EP="$(get_env SERVERMIND_DOMAIN):51820"
+  if [ -z "$MESH_EP" ]; then
+    PUBIP="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)"
+    PUBIP="$(printf '%s' "$PUBIP" | tr -d '[:space:]')"
+    [ -n "$PUBIP" ] && { MESH_EP="$PUBIP:51820"; info "Auto-detected controller public IP: $PUBIP"; }
+  fi
   [ -n "$MESH_EP" ] && set_env MESH_ENDPOINT "$MESH_EP"
   ok "Mesh ready — controller will bring up wg0 on start"
-  [ -z "$MESH_EP" ] && warn "Set MESH_ENDPOINT=<public-host>:51820 in .env so agents can dial in."
+  [ -z "$MESH_EP" ] && warn "Could not determine a reachable address — set MESH_ENDPOINT=<public-host>:51820 in .env so agents can dial in."
 fi
 
 # ── 7. start under PM2 (CONTROLLER) ─────────────────────────────────────────────
