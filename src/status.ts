@@ -3,7 +3,6 @@
 // failures are captured per-probe rather than failing the whole snapshot.
 
 import * as os from "node:os";
-import { config } from "./config.ts";
 import { getMonitoredUnits } from "./settings.ts";
 import { exec } from "./tools/exec.ts";
 import { pm2Action } from "./tools/pm2.ts";

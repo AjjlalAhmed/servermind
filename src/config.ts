@@ -126,8 +126,4 @@ export function authConfigured(): boolean {
   return config.passwordHash !== "" && config.totpSecret !== "";
 }
 
-export function emailConfigured(): boolean {
-  return config.email.enabled && config.email.to !== "";
-}
-
 export type Config = typeof config;
