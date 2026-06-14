@@ -167,6 +167,41 @@ bun run typecheck
 bun test
 ```
 
+## Roadmap
+
+**Next goal — manage a fleet of servers from one place** (agent + controller).
+
+Today ServerMind runs one instance per box. The next step is multi-server, using
+the standard agent/controller model (how Datadog, Netdata, Portainer work):
+
+```
+            Controller (Docker container — manages no host)
+            dashboard · chat · auth · server registry/router
+                 ▲            ▲            ▲   (agents dial OUT)
+            ┌────┴───┐   ┌────┴───┐   ┌────┴───┐
+            │ agent  │   │ agent  │   │ agent  │   one lightweight agent per host
+            │ vps 1  │   │ vps 2  │   │ vps 3  │   (today's execution core)
+            └────────┘   └────────┘   └────────┘
+```
+
+- **Agent on each server** — the current execution core: read-only allowlist,
+  the tools, and the arm switch, all enforced **locally on each box**.
+- **One controller** (a good fit for Docker, since it manages no host) — the UI,
+  chat, auth, and a server picker that routes the AI's tool calls to the chosen
+  agent.
+- **Agents dial *out*** to the controller (outbound websocket / reverse tunnel),
+  so no inbound ports need opening on the VPSes.
+
+Security stays intact because the **allowlist + arm switch live on each agent**,
+not the controller — so even the controller can't make a server do something its
+local agent forbids. The controller becomes a high-value target and would need
+strong central auth, but each server's safety boundary is enforced on the box.
+
+> Note: containerizing the *single-box* version is awkward (managing a host from
+> inside a container fights container isolation); it's the *controller* that
+> belongs in Docker, with native agents on each host. Interim option today:
+> install ServerMind once per server as independent instances.
+
 ## License
 
 [MIT](LICENSE) © Ajjlal Ahmed
