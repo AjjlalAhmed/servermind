@@ -7,7 +7,7 @@ let lastStatus = null;
 const cpuHist = [], memHist = [];   // rolling samples for sparklines
 
 // ─── view switching + URL (hash) routing + mobile drawer ─────────────────────────
-const VIEWS = ["overview", "assistant", "settings"];
+const VIEWS = ["overview", "fleet", "assistant", "settings"];
 const viewFromHash = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "overview"; };
 function showView(name) {
   if (!VIEWS.includes(name)) name = "overview";
@@ -17,10 +17,11 @@ function showView(name) {
     v.classList.toggle("flex", on && name === "assistant");
   });
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
-  $("#pageTitle").textContent = name === "assistant" ? "Assistant" : name === "settings" ? "Settings" : "Overview";
+  $("#pageTitle").textContent = name === "assistant" ? "Assistant" : name === "settings" ? "Settings" : name === "fleet" ? "Fleet" : "Overview";
   if (location.hash.slice(1) !== name) location.hash = name; // each view has its own URL: bookmarkable, back/forward works
   if (name === "assistant") setTimeout(() => input.focus(), 30);
   if (name === "settings") loadSettings();
+  if (name === "fleet") loadFleet();
   closeDrawer();
 }
 document.querySelectorAll("[data-nav]").forEach((n) => n.onclick = () => showView(n.dataset.nav));
@@ -59,7 +60,7 @@ async function connect() {
   $("#gateErr").textContent = "…";
   try {
     const r = await fetch("/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password, totp }) });
-    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); showView(viewFromHash()); return; }
+    if (r.ok) { $("#password").value = ""; $("#totp").value = ""; hideGate(); loadStatus(); refreshFleetNav(); showView(viewFromHash()); return; }
     const data = await r.json().catch(() => ({}));
     if (r.status === 503) return showGate("Auth not set up — run `bun run setup-auth` on the server.");
     if (r.status === 429) return showGate(`Locked out — try again in ${data.retryAfterSec || 60}s.`);
@@ -393,12 +394,16 @@ showSkeletons();   // paint placeholders on first frame, before /auth/me resolve
 (async function boot() {
   try {
     const r = await fetch("/auth/me"); const me = await r.json();
-    if (me.authenticated) { armed = !!me.armed; renderArm(); loadStatus(); showView(viewFromHash()); }
+    if (me.authenticated) { armed = !!me.armed; renderArm(); applyAuthState(me); loadStatus(); showView(viewFromHash()); }
     else if (!me.configured) showGate("Auth not set up — run `bun run setup-auth` on the server.");
     else showGate("");
   } catch { showGate(""); }
 })();
-setInterval(() => { if (!$("#gate").classList.contains("flex")) loadStatus(); }, 15_000);
+setInterval(() => {
+  if ($("#gate").classList.contains("flex")) return;
+  loadStatus(); // keeps the sidebar pulse + overview fresh
+  if (!document.querySelector('[data-view="fleet"]').classList.contains("hidden")) loadFleet();
+}, 15_000);
 
 // ─── settings panel ──────────────────────────────────────────────────────────
 const SET = {};
@@ -476,3 +481,46 @@ if ($("#setReportNow")) $("#setReportNow").onclick = async () => {
   try { await saveSettings(); const r = await fetch("/settings/report-now", { method: "POST" }); if (r.ok) setMsg("Report sent ✓"); else { const d = await r.json().catch(() => ({})); setMsg("Report failed: " + (d.error || r.status), true); } }
   catch (e) { setMsg(e.message, true); }
 };
+
+// ─── fleet (controller multi-server view) ────────────────────────────────────
+function applyAuthState(me) {
+  const nav = $("#navFleet");
+  if (nav) nav.style.display = me && me.fleet ? "" : "none";
+}
+function refreshFleetNav() { fetch("/auth/me").then((r) => r.json()).then(applyAuthState).catch(() => {}); }
+
+async function loadFleet() {
+  const grid = $("#fleetGrid");
+  if (!grid) return;
+  try {
+    const r = await fetch("/fleet");
+    if (!r.ok) { if (r.status === 401) showGate("Session expired — sign in again."); return; }
+    const d = await r.json();
+    if (!d.enabled) { grid.innerHTML = `<div class="fleet-empty">This instance isn't a controller. Set <code>FLEET_JOIN_TOKEN</code> and install agents to manage multiple servers from here.</div>`; return; }
+    if (!d.servers.length) { grid.innerHTML = `<div class="fleet-empty">No servers connected yet. Install the agent on a server, pointing it at this controller.</div>`; return; }
+    grid.innerHTML = d.servers.map(fleetCard).join("");
+  } catch { /* keep last render */ }
+}
+
+function fleetCard(s) {
+  const m = s.status && s.status.metrics;
+  const cpu = m ? (m.cpu.load1 ?? 0).toFixed(2) : "—";
+  const cpuPct = m && m.cpu.cores ? Math.round((m.cpu.load1 / m.cpu.cores) * 100) : 0;
+  const memPct = m ? m.memory.usedPct : null;
+  const diskPct = m ? m.disk.usedPct : null;
+  const svc = s.status && s.status.services ? Object.values(s.status.services) : [];
+  const up = svc.filter((v) => v === "active").length;
+  return `<div class="fleet-card${s.online ? "" : " off"}">
+    <div class="fc-head">
+      <span class="fc-dot ${s.online ? "ok" : "down"}"></span>
+      <span class="fc-name">${esc(s.hostname)}</span>
+      <span class="fc-state">${s.online ? "online" : "offline"}</span>
+    </div>
+    <div class="fc-metrics">
+      <div class="fc-m"><span class="fc-k">CPU</span><span class="fc-v ${m ? tone(cpuPct) : ""}">${cpu}</span></div>
+      <div class="fc-m"><span class="fc-k">Mem</span><span class="fc-v ${memPct != null ? tone(memPct) : ""}">${memPct != null ? memPct + "%" : "—"}</span></div>
+      <div class="fc-m"><span class="fc-k">Disk</span><span class="fc-v ${diskPct != null ? tone(diskPct) : ""}">${diskPct != null ? diskPct + "%" : "—"}</span></div>
+    </div>
+    <div class="fc-foot">${svc.length ? `${up}/${svc.length} services up` : (m ? "no services monitored" : "awaiting first report…")}</div>
+  </div>`;
+}

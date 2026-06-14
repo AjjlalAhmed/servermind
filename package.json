@@ -8,6 +8,7 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "mcp": "bun run src/mcp-server.ts",
+    "agent": "bun run src/agent-main.ts",
     "setup": "bun run src/setup.ts",
     "setup-auth": "bun run src/setup-auth.ts",
     "uninstall": "bash uninstall.sh",

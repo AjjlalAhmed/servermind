@@ -192,15 +192,21 @@ the standard agent/controller model (how Datadog, Netdata, Portainer work):
 - **Agents dial *out*** to the controller (outbound websocket / reverse tunnel),
   so no inbound ports need opening on the VPSes.
 
-Security stays intact because the **allowlist + arm switch live on each agent**,
-not the controller — so even the controller can't make a server do something its
-local agent forbids. The controller becomes a high-value target and would need
-strong central auth, but each server's safety boundary is enforced on the box.
+**One login, every server equal.** You set up password + TOTP **once on the
+controller** — agents have no human login (they authenticate with revocable
+per-agent tokens, so a fleet deploy via CI needs no per-server auth). No roles or
+labels; every server runs the same agent and shows up in one fleet dashboard with
+unified reports and a single daily digest.
 
-> Note: containerizing the *single-box* version is awkward (managing a host from
-> inside a container fights container isolation); it's the *controller* that
-> belongs in Docker, with native agents on each host. Interim option today:
-> install ServerMind once per server as independent instances.
+Security stays intact because the **allowlist + arm switch live on each agent**,
+not the controller — so even a compromised controller can't get a shell or bypass
+the arm gate; it can only ask an agent to run its own vetted tools. **Single-server
+mode stays the zero-config default** and is never broken by fleet features.
+
+> Full design + phased build plan: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+> (Note: the *single-box* app isn't meant to run in Docker — managing a host from
+> inside a container fights container isolation; it's the *controller* that belongs
+> in Docker, with native agents on each host.)
 
 ## License
 

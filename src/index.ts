@@ -12,8 +12,9 @@ import { getStatusSnapshot } from "./status.ts";
 import { rateLimit, acquireChatSlot, clientKey } from "./ratelimit.ts";
 import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
-import { isArmed, setArmed, armState } from "./arm.ts";
+import { localAgent } from "./agent.ts";
 import { startWatcher } from "./notify/watcher.ts";
+import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket } from "./fleet/hub.ts";
 import { settingsForApi, updateSettings } from "./settings.ts";
 import { sendEmail } from "./notify/email.ts";
 import { buildDigest } from "./notify/report.ts";
@@ -108,7 +109,7 @@ app.get("/health", (c) => c.json({ ok: true, service: "servermind", time: new Da
 // Whether the browser currently holds a valid session, and whether the server
 // has credentials configured at all.
 app.get("/auth/me", (c) =>
-  c.json({ authenticated: isValidSession(c), configured: authConfigured(), armed: isArmed() }),
+  c.json({ authenticated: isValidSession(c), configured: authConfigured(), armed: localAgent.isArmed(), fleet: fleetEnabled() }),
 );
 
 // Arm/disarm mutations — server-side state, authenticated. /chat reads this, not
@@ -117,8 +118,7 @@ app.use("/auth/arm", requireAuth);
 app.post("/auth/arm", async (c) => {
   let body: { on?: boolean };
   try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
-  setArmed(body.on === true);
-  return c.json(armState());
+  return c.json(localAgent.setArmed(body.on === true));
 });
 
 // Stricter limiter on login to slow credential stuffing (lockout is in login.ts).
@@ -150,12 +150,20 @@ app.use("/chat", rateLimit({ limit: 20, windowMs: 60_000 }), requireAuth);
 
 app.get("/status", async (c) => {
   try {
-    const snapshot = await getStatusSnapshot();
+    const snapshot = await localAgent.status();
     return c.json(snapshot);
   } catch (e) {
     console.error("[status] error:", (e as Error).message); // detail to logs, not the client
     return c.json({ error: "failed to collect status" }, 500);
   }
+});
+
+// Fleet overview — every connected agent + its latest status. Empty list when
+// this instance isn't acting as a controller (no FLEET_JOIN_TOKEN).
+app.use("/fleet", requireAuth);
+app.get("/fleet", (c) => {
+  const reg = fleetRegistry();
+  return c.json({ enabled: fleetEnabled(), servers: reg ? reg.list() : [] });
 });
 
 // ─── Dashboard settings (authenticated; secrets masked in responses) ───────────
@@ -206,7 +214,7 @@ app.post("/chat", async (c) => {
     .filter((h) => h.role === "user" || h.role === "assistant") as ChatMessage[];
 
   // Mutations are gated by server-side arm state, NOT a client-supplied flag.
-  const allowMutations = isArmed();
+  const allowMutations = localAgent.isArmed();
 
   // Cap concurrent chats — each spawns a claude + MCP subprocess.
   const release = acquireChatSlot();
@@ -251,17 +259,33 @@ app.post("/chat", async (c) => {
 // Start the server explicitly. We do NOT rely on Bun's `export default { fetch }`
 // auto-serve — it doesn't reliably fire when launched under PM2, so the process
 // would stay alive without ever binding the port. Bun.serve() guarantees it.
+// Fleet controller hub — only initialized when FLEET_JOIN_TOKEN is set. Agents
+// connect over a WebSocket at /fleet/agent. Standalone leaves this null.
+const fleetHub = fleetEnabled() ? startFleetHub() : null;
+
 const server = Bun.serve({
   hostname: config.bindHost,
   port: config.port,
   // generous idle timeout for long-running tool output streamed over SSE
   idleTimeout: 255,
-  fetch: app.fetch,
+  fetch(req, srv) {
+    if (fleetHub) {
+      const { pathname } = new URL(req.url);
+      if (pathname === "/fleet/agent") {
+        // Agents dial in here; upgrade to a WebSocket handled by fleetWebSocket.
+        if (srv.upgrade(req, { data: { agentId: null } })) return undefined;
+        return new Response("expected a websocket upgrade", { status: 426 });
+      }
+    }
+    return app.fetch(req, srv);
+  },
+  websocket: fleetWebSocket,
 });
 
 console.log(`\n  ServerMind listening on http://${server.hostname}:${server.port}`);
 console.log(`  AI: ${backendLabel()}  |  2FA: ${authConfigured() ? "configured" : "NOT configured — run `bun run setup-auth`"}`);
-console.log(`  routes: /health /auth/login /status /chat`);
+console.log(`  routes: /health /auth/login /status /chat${fleetHub ? " /fleet  (hub: /fleet/agent)" : ""}`);
+if (fleetHub) console.log("  Fleet: controller hub ON — agents may connect with the join token");
 
 // Start the background email watcher (no-op unless email is configured).
 startWatcher();

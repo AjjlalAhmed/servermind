@@ -120,6 +120,15 @@ export const config = {
     certDays: Number(optional("ALERT_CERT_DAYS", "14")),
     certDomains: list("ALERT_CERT_DOMAINS", optional("SERVERMIND_DOMAIN", "") ? [optional("SERVERMIND_DOMAIN", "")] : []),
   },
+
+  // ── Fleet / multi-server (optional; see ARCHITECTURE.md) ────────────────────
+  // Standalone leaves both blank. On a CONTROLLER, set FLEET_JOIN_TOKEN to enable
+  // the agent hub. On an AGENT, set SERVERMIND_CONTROLLER (+ the join token) and
+  // run `bun run agent`.
+  fleet: {
+    joinToken: optional("FLEET_JOIN_TOKEN", ""),         // controller: token agents must present (hub enabled if set)
+    controllerUrl: optional("SERVERMIND_CONTROLLER", ""), // agent: ws(s) URL of the controller hub
+  },
 } as const;
 
 export function authConfigured(): boolean {

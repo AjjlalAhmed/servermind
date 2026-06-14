@@ -473,3 +473,23 @@ select.field { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .set-msg.bad { color: var(--red); }
 @media (max-width: 760px) { .set-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .settings { padding: 16px 14px 36px; } .set-panel { padding: 16px 14px; } .set-actions, .set-bar { flex-direction: column; align-items: stretch; } .set-bar .modal-btn { width: 100%; } }
+
+/* ─── fleet view ─── */
+.fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 12px; }
+.fleet-empty { color: var(--text-muted); font-size: 14px; line-height: 1.6; padding: 22px; border: 1px dashed var(--border-strong); border-radius: var(--radius); }
+.fleet-empty code { font-family: var(--font-mono); font-size: 12px; color: var(--accent-2); }
+.fleet-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 14px 16px; }
+.fleet-card.off { opacity: .6; }
+.fc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 13px; }
+.fc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fc-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.fc-dot.down { background: var(--text-faint); }
+.fc-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-state { font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .07em; }
+.fc-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fc-m { display: flex; flex-direction: column; gap: 3px; }
+.fc-k { font-size: 11px; color: var(--text-faint); }
+.fc-v { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--text); }
+.fc-v.warn { color: var(--amber); }
+.fc-v.bad { color: var(--red); }
+.fc-foot { margin-top: 13px; font-size: 12px; color: var(--text-muted); }

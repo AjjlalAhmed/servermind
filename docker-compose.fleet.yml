@@ -1,0 +1,46 @@
+# Local fleet SIMULATION — one controller + two agents on a private network.
+# NOT for production. The agents run in containers and report each container's
+# stats, which is perfect for exercising the fleet transport + dashboard.
+#
+#   1. Create auth for the controller (once):   bun run setup-auth   (writes .env)
+#      — or copy .env.example to .env and set SERVERMIND_PASSWORD_HASH + SERVERMIND_TOTP_SECRET.
+#   2. docker compose -f docker-compose.fleet.yml up --build
+#   3. Open http://localhost:5500 → log in → Fleet → you'll see agent-web + agent-db.
+#
+# The join token below is shared by the controller (to enable the hub) and the
+# agents (to authenticate). Change it; it's only a local sim default.
+
+x-join-token: &join "sim-join-token-change-me"
+
+services:
+  controller:
+    build: .
+    command: bun run start
+    env_file: .env                 # password + TOTP from `bun run setup-auth`
+    environment:
+      FLEET_JOIN_TOKEN: *join
+      BIND_HOST: "0.0.0.0"         # bind inside the container so the port maps out
+      PORT: "5500"
+      SECURE_COOKIES: ""           # plain http on localhost for the sim
+    ports:
+      - "5500:5500"
+
+  agent-web:
+    build: .
+    command: bun run agent
+    hostname: agent-web
+    environment:
+      SERVERMIND_CONTROLLER: "ws://controller:5500/fleet/agent"
+      FLEET_JOIN_TOKEN: *join
+      SERVERMIND_AGENT_ID: "sim-agent-web-00000001"
+    depends_on: [controller]
+
+  agent-db:
+    build: .
+    command: bun run agent
+    hostname: agent-db
+    environment:
+      SERVERMIND_CONTROLLER: "ws://controller:5500/fleet/agent"
+      FLEET_JOIN_TOKEN: *join
+      SERVERMIND_AGENT_ID: "sim-agent-db-00000001"
+    depends_on: [controller]

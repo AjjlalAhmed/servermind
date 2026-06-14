@@ -6,7 +6,8 @@
 // as the Claude Code backend, so the UI and routes don't care which is active.
 
 import { getAI } from "../settings.ts";
-import { dispatchTool, isMutatingCall } from "../tools/index.ts";
+import { isMutatingCall } from "../tools/index.ts";
+import { localAgent } from "../agent.ts";
 import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
 
 const MAX_TURNS = 10;
@@ -201,7 +202,7 @@ export async function runChat(
         try { input = JSON.parse(c.args || "{}"); } catch { input = {}; }
         emit({ type: "tool_use", id: c.id, name: c.name, input, mutating: isMutatingCall(c.name, input) });
 
-        const result = await dispatchTool(c.name, input, { allowMutations: opts.allowMutations });
+        const result = await localAgent.invoke(c.name, input, !!opts.allowMutations);
         emit({ type: "tool_result", id: c.id, isError: result.isError, preview: preview(result.content) });
 
         messages.push({ role: "tool", tool_call_id: c.id, content: result.content });
