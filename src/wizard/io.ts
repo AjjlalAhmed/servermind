@@ -19,12 +19,24 @@ const C = {
 };
 export const color = C;
 
+const RULE = "─".repeat(52);
 export function heading(t: string) {
-  console.log(`\n${C.accent}${C.bold}${t}${C.reset}\n${C.dim}${"─".repeat(t.length)}${C.reset}`);
+  console.log(`\n${C.accent}${C.bold}  ${t}${C.reset}`);
+  console.log(`  ${C.dim}${RULE}${C.reset}`);
 }
-export function note(t: string) { console.log(`  ${C.dim}${t}${C.reset}`); }
-export function ok(t: string) { console.log(`  ${C.green}✓${C.reset} ${t}`); }
-export function warn(t: string) { console.log(`  ${C.yellow}!${C.reset} ${t}`); }
+// A small top banner for the start of the wizard.
+export function banner(title: string, subtitle: string) {
+  console.log(`\n  ${C.accent}${C.bold}${title}${C.reset}`);
+  console.log(`  ${C.dim}${subtitle}${C.reset}`);
+  console.log(`  ${C.dim}${RULE}${C.reset}`);
+}
+export function note(t: string) { console.log(`    ${C.dim}${t}${C.reset}`); }
+export function ok(t: string) { console.log(`    ${C.green}✓${C.reset} ${t}`); }
+export function warn(t: string) { console.log(`    ${C.yellow}▲${C.reset} ${t}`); }
+// A labelled summary line, e.g.  AI       grok-3  — used in the final recap.
+export function field(label: string, value: string) {
+  console.log(`    ${C.dim}${label.padEnd(9)}${C.reset}${value}`);
+}
 
 // Prompt for a line. `def` is shown and returned if the user just hits enter.
 // `hidden` mutes the echo (for passwords / keys).
@@ -36,7 +48,8 @@ let pipedIdx = 0;
 export async function ask(label: string, opts: { hidden?: boolean; def?: string } = {}): Promise<string> {
   const isTTY = !!process.stdin.isTTY;
   const suffix = opts.def && !opts.hidden ? ` ${C.dim}(${opts.def})${C.reset}` : "";
-  const query = `  ${label}${suffix}: `;
+  const lock = opts.hidden ? ` ${C.dim}(hidden)${C.reset}` : "";
+  const query = `  ${label}${suffix}${lock} ${C.accent}❯${C.reset} `;
 
   if (!isTTY) {
     if (pipedLines === null) pipedLines = (await Bun.stdin.text()).split("\n");
@@ -66,13 +79,17 @@ export async function confirm(label: string, def = false): Promise<boolean> {
 
 // Single-choice menu. Returns the chosen index (0-based).
 export async function choose(label: string, options: string[], def = 0): Promise<number> {
-  console.log(`  ${label}`);
-  options.forEach((o, i) => console.log(`    ${C.accent}${i + 1}${C.reset}) ${o}`));
+  console.log(`  ${C.bold}${label}${C.reset}`);
+  options.forEach((o, i) => {
+    const sel = i === def;
+    const tag = sel ? ` ${C.dim}· default${C.reset}` : "";
+    console.log(`    ${C.accent}${i + 1})${C.reset} ${sel ? C.bold : ""}${o}${C.reset}${tag}`);
+  });
   for (;;) {
     const a = await ask(`Choose 1-${options.length}`, { def: String(def + 1) });
     const n = parseInt(a, 10);
     if (n >= 1 && n <= options.length) return n - 1;
-    warn("Invalid choice.");
+    warn("Please enter a number from the list.");
   }
 }
 

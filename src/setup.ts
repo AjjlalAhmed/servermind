@@ -6,7 +6,7 @@
 
 import QRCode from "qrcode";
 import { generateSecret, otpauthURL, verifyTotp } from "./auth/totp.ts";
-import { ask, confirm, choose, heading, note, ok, warn, color as C, readEnv, upsertEnv } from "./wizard/io.ts";
+import { ask, confirm, choose, heading, banner, field, note, ok, warn, color as C, readEnv, upsertEnv } from "./wizard/io.ts";
 import { smtpSend, resendSend } from "./notify/email.ts";
 
 // ── live tests ────────────────────────────────────────────────────────────────
@@ -128,8 +128,8 @@ function nginxBlock(domain: string, port: string): string {
 
 // ── wizard ──────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`\n${C.accent}${C.bold}  ServerMind setup${C.reset}`);
-  note("Configures everything into .env. Press enter to keep a shown default.\n");
+  banner("ServerMind · setup", "Configure auth, AI, networking, services & email — saved to .env");
+  note("Press Enter to accept the (grey) default. Hidden fields don't echo as you type.");
   const cur = await readEnv();
   const env: Record<string, string> = {};
 
@@ -195,10 +195,22 @@ async function main() {
     // "Groq" (fast inference) and "xAI Grok" sound alike but are different services
     // with different keys — flag it so nobody pastes one into the other.
     note('Heads up: "Groq" and "xAI Grok" are different services — pick the one your key is for.');
-    const p = presets[await choose("Provider", presets.map((x) => x.name))]!;
+    // Pre-select the provider you're ALREADY using, so re-running setup (e.g. to
+    // update) and pressing enter keeps your config instead of resetting to Gemini.
+    const curBase = cur.get("AI_BASE_URL") || "";
+    let defIdx = 0;
+    if (curBase) {
+      const i = presets.findIndex((x) => x.base && x.base === curBase);
+      defIdx = i >= 0 ? i : presets.length - 1; // matched a preset, else "Custom"
+    }
+    const choice = await choose("Provider", presets.map((x) => x.name), defIdx);
+    const p = presets[choice]!;
+    const kept = choice === defIdx && curBase !== ""; // staying on the same provider
     if (p.base === "https://api.x.ai/v1") note("If the model errors, list valid ids: curl https://api.x.ai/v1/models -H \"Authorization: Bearer <key>\"");
-    env.AI_BASE_URL = (await ask("API base URL", { def: p.base })).replace(/\/+$/, "");
-    env.AI_MODEL = await ask("Model", { def: p.model });
+    // Default to your existing URL/model when you keep the same provider; only
+    // fall back to the preset's defaults when you actually switch providers.
+    env.AI_BASE_URL = (await ask("API base URL", { def: kept ? curBase : p.base })).replace(/\/+$/, "");
+    env.AI_MODEL = await ask("Model", { def: kept && cur.get("AI_MODEL") ? cur.get("AI_MODEL")! : p.model });
 
     // API key. This is the step people skip by accident — so make it loud, show
     // where to get one, and don't let an empty key slip through silently.
@@ -408,6 +420,12 @@ async function main() {
   await upsertEnv(env);
   heading("Done");
   ok(`Wrote ${Object.keys(env).length} settings to .env (chmod 600).`);
+
+  // Compact recap of the key choices.
+  console.log("");
+  field("AI", env.AI_BACKEND === "claude-code" ? "Claude Code (subscription)" : (env.AI_MODEL || "OpenAI-compatible"));
+  field("Access", access === 1 ? (domain ? `https://${domain}` : "public domain (reverse proxy)") : "private (localhost / SSH tunnel)");
+  field("Email", env.EMAIL_ENABLED === "1" ? `on → ${env.EMAIL_TO}` : "off");
 
   // How to actually open the UI, tailored to the access method chosen above.
   console.log(`\n  ${C.bold}Reaching the UI:${C.reset}`);
