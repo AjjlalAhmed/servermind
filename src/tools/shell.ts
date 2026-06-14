@@ -66,11 +66,36 @@ const POLICY: Record<string, ArgValidator> = {
   },
 
   journalctl: (args) => {
-    // read-only log viewing, bounded
-    const allowed = new Set(["-u", "-n", "--no-pager", "-e", "--since", "-p", "-x", "-b", "-r"]);
-    for (const a of args) {
-      if (a.startsWith("-") && !allowed.has(a)) return `journalctl: flag not allowed: ${a}`;
+    // Read-only AND tightly bounded. The old deny-list only checked flag NAMES,
+    // so positional MATCH expressions (_SYSTEMD_UNIT=…, _UID=0, /usr/bin/sudo) and
+    // a missing -u dumped the entire merged system journal (secrets included).
+    // Now: every value is validated and a managed-unit -u filter is required.
+    const boolFlags = new Set(["--no-pager", "-e", "-x", "-b", "-r"]);
+    const valueFlags = new Set(["-u", "-n", "--since", "-p"]);
+    const units = new Set(
+      [...config.managedServices, ...config.monitoredUnits].flatMap((u) => [u, `${u}.service`]),
+    );
+    let hasUnit = false;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i]!;
+      if (!a.startsWith("-")) return `journalctl: positional/match arguments are not allowed: ${a}`;
+      if (boolFlags.has(a)) continue;
+      if (!valueFlags.has(a)) return `journalctl: flag not allowed: ${a}`;
+      const val = args[++i];
+      if (val === undefined || val.startsWith("-")) return `journalctl: ${a} requires a value`;
+      if (a === "-u") {
+        if (!units.has(val)) return `journalctl: unit not allowed: ${val} (managed units only)`;
+        hasUnit = true;
+      } else if (a === "-n") {
+        if (!/^\d{1,4}$/.test(val)) return `journalctl: -n requires a number (max 9999): ${val}`;
+      } else if (a === "-p") {
+        if (!/^[a-z0-9]+$/i.test(val)) return `journalctl: invalid -p value: ${val}`;
+      } else if (a === "--since") {
+        // simple time tokens only — no paths or match expressions
+        if (/[/=]/.test(val)) return `journalctl: invalid --since value: ${val}`;
+      }
     }
+    if (!hasUnit) return "journalctl requires -u <managed-unit> (whole-journal reads are not permitted)";
     return null;
   },
 };

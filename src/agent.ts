@@ -13,7 +13,7 @@
 // left as-is here; routing it to remote agents is a later phase.
 
 import { getStatusSnapshot, type StatusSnapshot } from "./status.ts";
-import { dispatchTool, type DispatchResult } from "./tools/index.ts";
+import { dispatchTool, isMutatingCall, type DispatchResult } from "./tools/index.ts";
 import { isArmed, setArmed, armState } from "./arm.ts";
 
 export interface ArmState {
@@ -38,8 +38,14 @@ export class LocalAgent implements Agent {
   status(): Promise<StatusSnapshot> {
     return getStatusSnapshot();
   }
-  invoke(name: string, input: unknown, allowMutations: boolean): Promise<DispatchResult> {
-    return dispatchTool(name, input, { allowMutations });
+  async invoke(name: string, input: unknown, allowMutations: boolean): Promise<DispatchResult> {
+    const r = await dispatchTool(name, input, { allowMutations });
+    // Single-use arm: a successful mutating action consumes the arm, so the
+    // operator must re-arm for the next one. This bounds prompt-injection in
+    // tool output to at most ONE mutation per arm window, server-side — the
+    // model can't chain "operator already confirmed, now also restart X".
+    if (allowMutations && !r.isError && isMutatingCall(name, input)) setArmed(false);
+    return r;
   }
   isArmed(): boolean {
     return isArmed();

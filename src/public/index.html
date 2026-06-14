@@ -110,7 +110,18 @@
     <!-- ===== FLEET ===== -->
     <section data-view="fleet" class="hidden">
       <div class="overview">
-        <div class="section-title" id="fleetSummary">Servers</div>
+        <div class="fleet-head">
+          <div class="section-title" id="fleetSummary">Servers</div>
+          <button class="btn-add-server" id="addServerBtn" type="button">＋ Add server</button>
+        </div>
+        <div class="add-server-panel hidden" id="addServerPanel">
+          <p>Run this on the new server to enroll it into this fleet:</p>
+          <pre class="enroll-cmd"><code id="enrollCmd"></code></pre>
+          <div class="add-server-actions">
+            <button class="btn-copy" id="copyEnrollBtn" type="button">Copy command</button>
+            <span class="enroll-note" id="enrollNote"></span>
+          </div>
+        </div>
         <div class="fleet-grid" id="fleetGrid"></div>
       </div>
     </section>

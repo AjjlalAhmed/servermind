@@ -130,6 +130,19 @@ export const config = {
     joinToken: optional("FLEET_JOIN_TOKEN", ""),         // controller: token agents must present (hub enabled if set)
     controllerUrl: optional("SERVERMIND_CONTROLLER", ""), // agent: ws(s) URL of the controller hub
   },
+
+  // ── WireGuard mesh (optional; set up by `install.sh --mesh`) ────────────────
+  // When enabled the controller brings up wg0 on start and enrolls agents into a
+  // self-hosted mesh. The privileged reload goes through the scoped sudoers rule
+  // (see scripts/setup-mesh-controller.sh). Standalone/non-mesh leaves enabled=false.
+  mesh: {
+    enabled: /^(1|true|yes)$/i.test(optional("MESH_ENABLED", "")),
+    cidr: optional("MESH_CIDR", "10.99.0.0/24"),          // widen to /16 for big fleets
+    endpoint: optional("MESH_ENDPOINT", ""),              // host:port agents dial, e.g. vps.example.com:51820
+    listenPort: Number(optional("MESH_LISTEN_PORT", "51820")),
+    iface: optional("WG_IFACE", "wg0"),
+    dir: optional("WG_DIR", "/etc/wireguard"),
+  },
 } as const;
 
 export function authConfigured(): boolean {

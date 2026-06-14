@@ -13,6 +13,7 @@
 import { config } from "./config.ts";
 import { getAI } from "./settings.ts";
 import { isMutatingCall } from "./tools/index.ts";
+import { armedUntilMs } from "./arm.ts";
 
 const ROOT = new URL("..", import.meta.url).pathname; // project root
 const MCP_SERVER = new URL("./mcp-server.ts", import.meta.url).pathname;
@@ -119,15 +120,16 @@ export async function runChat(
 ): Promise<void> {
   const prompt = buildPrompt(message, history);
 
-  // The MCP subprocess reads SERVERMIND_ALLOW_MUTATIONS to decide whether to
-  // honour mutating tool calls. We set it explicitly in the mcp-config env so
-  // it doesn't depend on how the CLI forwards its environment.
+  // The MCP subprocess reads SERVERMIND_ARMED_UNTIL (an absolute epoch-ms) and
+  // re-checks it on EVERY tool call, so the arm's 10-min TTL is enforced live
+  // inside a running chat rather than frozen at spawn time. The Claude backend
+  // is local-only (see the /chat guard), so the local box's arm state applies.
   const mcpConfig = JSON.stringify({
     mcpServers: {
       servermind: {
         command: process.execPath,
         args: ["run", MCP_SERVER],
-        env: { SERVERMIND_ALLOW_MUTATIONS: opts.allowMutations ? "1" : "0" },
+        env: { SERVERMIND_ARMED_UNTIL: String(armedUntilMs()) },
       },
     },
   });

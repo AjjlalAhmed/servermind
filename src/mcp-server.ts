@@ -10,15 +10,25 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { TOOL_SPECS, dispatchTool } from "./tools/index.ts";
+import { TOOL_SPECS, dispatchTool, isMutatingCall } from "./tools/index.ts";
 
 const server = new McpServer({ name: "servermind", version: "1.0.0" });
 
+// Mutations are allowed only while the arm window (an absolute epoch passed by
+// the parent) is still open AND no mutation has been consumed yet in this chat.
+// Re-checking the epoch per call honours the 10-min TTL live; the single-use
+// flag stops prompt injection from chaining several mutations in one chat.
+let mutationConsumed = false;
+function mutationsAllowed(): boolean {
+  const until = Number(process.env.SERVERMIND_ARMED_UNTIL || "0");
+  return !mutationConsumed && Date.now() < until;
+}
+
 for (const spec of TOOL_SPECS) {
   server.tool(spec.name, spec.description, spec.schema, async (input: Record<string, unknown>) => {
-    const result = await dispatchTool(spec.name, input, {
-      allowMutations: process.env.SERVERMIND_ALLOW_MUTATIONS === "1",
-    });
+    const allowMutations = mutationsAllowed();
+    const result = await dispatchTool(spec.name, input, { allowMutations });
+    if (allowMutations && !result.isError && isMutatingCall(spec.name, input)) mutationConsumed = true;
     return {
       content: [{ type: "text", text: result.content }],
       isError: result.isError,

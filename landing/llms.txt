@@ -13,7 +13,7 @@
 ## Security model (enforced server-side, not by trusting the AI)
 
 - **No raw shell.** Every command runs as argv against a strict read-only allowlist (df, free, ps, ss, systemctl status, journalctl, reading logs under /var/log), so command injection is structurally impossible. Deletes, file writes, and network access are not in the allowlist.
-- **Mutations are gated.** Service restart/stop/start are refused unless the operator flips a server-side "arm" switch that the AI cannot set itself and that auto-expires. Prompt injection in tool output cannot trigger changes.
+- **Mutations are gated.** Service restart/stop/start are refused unless the operator flips a server-side "arm" switch that the AI cannot set itself. The gate is re-checked on every call, an arm auto-expires after a few minutes, and a single change consumes it — so prompt injection in tool output cannot silently flip the switch or chain extra changes.
 - **Authentication.** Password + TOTP two-factor auth, argon2id hashing, HttpOnly/SameSite=Strict session cookies, brute-force lockout, rate limiting, strict Content-Security-Policy.
 - **Privacy.** Secrets stay in local files (chmod 600). Only your chosen AI provider receives your prompt and the command output it needs, under your own account. Use local Ollama for zero data egress.
 - **No database.** Settings are a JSON file and sessions are in memory — there is no SQL/ORM, so SQL injection has no surface to attack.

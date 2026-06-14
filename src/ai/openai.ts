@@ -205,9 +205,13 @@ export async function runChat(
         emit({ type: "tool_use", id: c.id, name: c.name, input, mutating: isMutatingCall(c.name, input) });
 
         // Fleet tools (list/run across servers) vs a per-box tool on the target.
+        // Re-read the target's arm state at THIS call (not a boolean captured at
+        // chat start) so the 10-min TTL and an explicit mid-chat disarm take
+        // effect on an already-running chat. The agent re-checks again itself.
+        const target = opts.agent ?? localAgent;
         const result = isFleetTool(c.name)
           ? await dispatchFleetTool(c.name, input)
-          : await (opts.agent ?? localAgent).invoke(c.name, input, !!opts.allowMutations);
+          : await target.invoke(c.name, input, target.isArmed());
         emit({ type: "tool_result", id: c.id, isError: result.isError, preview: preview(result.content) });
 
         messages.push({ role: "tool", tool_call_id: c.id, content: result.content });

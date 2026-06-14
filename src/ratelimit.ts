@@ -6,23 +6,36 @@ import type { Context, Next } from "hono";
 // processes (which cost CPU and subscription quota).
 
 // Derive a client identity for rate-limiting / lockout that an attacker can't
-// trivially spoof. ServerMind sits behind ONE trusted reverse proxy (Caddy),
-// which APPENDS the real peer IP to X-Forwarded-For. The rightmost entry is
-// therefore the one the proxy set — any extra left-hand values the client
-// injected are ignored. (If you re-enable Cloudflare's proxy, set
-// TRUSTED_CLIENT_HEADER=cf-connecting-ip.)
+// trivially spoof. By DEFAULT we use the real TCP peer address — forwarding
+// headers (X-Forwarded-For, X-Real-IP, …) are attacker-controlled on a directly
+// reachable instance, so trusting them lets a client rotate them per request and
+// defeat the lockout entirely. Header trust is opt-in: set TRUST_PROXY=1 (and,
+// for a custom header like Cloudflare's, TRUSTED_CLIENT_HEADER=cf-connecting-ip)
+// only when EVERY request is forced through your reverse proxy.
+function proxyTrusted(): boolean {
+  if (/^(1|true|yes)$/i.test((process.env.TRUST_PROXY || "").trim())) return true;
+  // Configuring a trusted header is itself an explicit statement of proxy trust.
+  return (process.env.TRUSTED_CLIENT_HEADER || "").trim() !== "";
+}
+
 export function clientKey(c: Context): string {
-  const trusted = (process.env.TRUSTED_CLIENT_HEADER || "").trim().toLowerCase();
-  if (trusted) {
-    const v = c.req.header(trusted);
-    if (v) return v.split(",")[0]!.trim();
+  if (proxyTrusted()) {
+    const trusted = (process.env.TRUSTED_CLIENT_HEADER || "").trim().toLowerCase();
+    if (trusted) {
+      const v = c.req.header(trusted);
+      if (v) return v.split(",")[0]!.trim();
+    }
+    const xff = c.req.header("x-forwarded-for");
+    if (xff) {
+      const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length) return parts[parts.length - 1]!; // rightmost = proxy-set peer IP
+    }
+    const xri = c.req.header("x-real-ip")?.trim();
+    if (xri) return xri;
   }
-  const xff = c.req.header("x-forwarded-for");
-  if (xff) {
-    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
-    if (parts.length) return parts[parts.length - 1]!; // rightmost = proxy-set peer IP
-  }
-  return c.req.header("x-real-ip")?.trim() || "local";
+  // Real TCP peer — the Bun server is passed as Hono's `env` from index.ts.
+  const srv = c.env as { requestIP?: (r: Request) => { address?: string } | null } | undefined;
+  return srv?.requestIP?.(c.req.raw)?.address || "local";
 }
 
 interface Window {

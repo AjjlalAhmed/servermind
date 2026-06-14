@@ -7,6 +7,8 @@ let chatServer = null;      // null = the local controller box; else a remote ag
 let chatServerName = "";
 let fleetCanChat = false;   // controller's AI backend can drive remote boxes
 let isController = false;    // this instance manages a fleet (vs a standalone box)
+let fleetJoinToken = "";     // join token agents present at enrollment
+let fleetMesh = false;       // controller is running a self-hosted WireGuard mesh
 let lastStatus = null;
 const cpuHist = [], memHist = [];   // rolling samples for sparklines
 
@@ -265,7 +267,7 @@ function renderDashboard(s) {
 }
 
 // ─── markdown ─────────────────────────────────────────────────────────────────────
-function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 function mdInline(s) { return s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(?<![\w])\*([^*\n]+)\*(?![\w])/g, "<em>$1</em>"); }
 function renderMarkdown(text) {
   const lines = esc(text).split("\n"); let html = "", inCode = false, inList = false, buf = [];
@@ -508,10 +510,14 @@ async function loadFleet() {
     const r = await fetch("/fleet");
     if (!r.ok) { if (r.status === 401) showGate("Session expired — sign in again."); return; }
     const d = await r.json();
+    fleetJoinToken = d.joinToken || "";
+    fleetMesh = !!d.mesh;
+    const addBtn = $("#addServerBtn");
+    if (addBtn) addBtn.style.display = d.enabled ? "" : "none";
     if (!d.enabled) { grid.innerHTML = `<div class="fleet-empty">This instance isn't a controller. Set <code>FLEET_JOIN_TOKEN</code> and install agents to manage multiple servers from here.</div>`; return; }
-    if (!d.servers.length) { grid.innerHTML = `<div class="fleet-empty">No servers connected yet. Install the agent on a server, pointing it at this controller.</div>`; return; }
     fleetCanChat = !!d.canChat;
-    grid.innerHTML = d.servers.map(fleetCard).join("");
+    if (!d.servers.length) { grid.innerHTML = `<div class="fleet-empty">No servers connected yet. Click <b>＋ Add server</b> above for the one-line enroll command.</div>`; }
+    else { grid.innerHTML = d.servers.map(fleetCard).join(""); }
     const online = d.servers.filter((s) => s.online).length;
     const sum = $("#fleetSummary");
     if (sum) sum.textContent = `${d.servers.length} server${d.servers.length !== 1 ? "s" : ""} · ${online} online`;
@@ -526,10 +532,37 @@ $("#fleetGrid") && $("#fleetGrid").addEventListener("click", (e) => {
   if (rm) { removeServer(rm.dataset.server, rm.dataset.host); }
 });
 async function removeServer(id, host) {
-  if (!confirm(`Remove "${host}" from the fleet?\nIt will reappear if its agent reconnects.`)) return;
+  const msg = fleetMesh
+    ? `Revoke "${host}"?\nIts WireGuard peer is removed immediately — it can't reach the mesh until re-enrolled.`
+    : `Remove "${host}" from the fleet?\nIt will reappear if its agent reconnects.`;
+  if (!confirm(msg)) return;
   try { await fetch("/fleet/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ server: id }) }); } catch {}
   loadFleet();
 }
+
+// "Add server" → reveal the one-line enroll command for a new box. The controller
+// URL is whatever you used to reach this UI (agents must be able to reach it too);
+// --mesh is appended when this controller runs a WireGuard mesh.
+function buildEnrollCommand() {
+  const origin = location.origin;                       // e.g. https://controller.example.com
+  const wsHost = location.host;                          // host[:port]
+  const wsScheme = location.protocol === "https:" ? "wss" : "ws";
+  const meshFlag = fleetMesh ? " --mesh" : "";
+  return `curl -fsSL ${origin}/install.sh | bash -s -- \\\n  --controller ${wsScheme}://${wsHost}/fleet/agent --token ${fleetJoinToken}${meshFlag}`;
+}
+$("#addServerBtn") && ($("#addServerBtn").onclick = () => {
+  const panel = $("#addServerPanel");
+  if (!panel) return;
+  const showing = !panel.classList.contains("hidden");
+  if (showing) { panel.classList.add("hidden"); return; }
+  $("#enrollCmd").textContent = buildEnrollCommand();
+  const note = $("#enrollNote");
+  if (note) note.textContent = fleetMesh ? "Mesh enroll: the agent dials in, gets a WireGuard address, then talks over the tunnel." : "";
+  panel.classList.remove("hidden");
+});
+$("#copyEnrollBtn") && ($("#copyEnrollBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(buildEnrollCommand()); const b = $("#copyEnrollBtn"); const t = b.textContent; b.textContent = "Copied ✓"; setTimeout(() => (b.textContent = t), 1500); } catch {}
+});
 function selectServer(id, host, isArmed) {
   chatServer = id; chatServerName = host;
   armed = !!isArmed; renderArm();

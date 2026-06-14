@@ -18,6 +18,13 @@ export function isArmed(): boolean {
   return Date.now() < armedUntil;
 }
 
+// Absolute epoch (ms) the arm expires at, or 0 when disarmed. Passed into the
+// Claude MCP subprocess so it re-checks the TTL on every tool call instead of
+// freezing the arm state at spawn time.
+export function armedUntilMs(): number {
+  return armedUntil;
+}
+
 export function armState() {
   const armed = isArmed();
   return { armed, expiresInSec: armed ? Math.ceil((armedUntil - Date.now()) / 1000) : 0 };

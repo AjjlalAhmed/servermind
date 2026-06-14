@@ -44,6 +44,7 @@ services:
     hostname: agent-web
     environment: &agent-env
       SERVERMIND_CONTROLLER: "ws://controller:5500/fleet/agent"
+      FLEET_ALLOW_INSECURE: "1"     # trusted internal docker network only — prod must use wss://
       FLEET_JOIN_TOKEN: *join
       SERVERMIND_AGENT_ID: "sim-agent-web-00000001"
       REDIS_HOST: "redis"

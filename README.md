@@ -100,7 +100,9 @@ servermind.example.com {
 ```
 Nginx works too (`proxy_pass` + `proxy_buffering off`; get a cert with
 `certbot`). Set `SECURE_COOKIES=1` (the wizard does this automatically) so the
-session cookie is marked `Secure`.
+session cookie is marked `Secure`, and `TRUST_PROXY=1` so brute-force lockout and
+rate limiting use the real client IP from `X-Forwarded-For` rather than the
+proxy's own address.
 
 > **Don't** bind to `0.0.0.0` and browse to `http://server-ip:5500` directly —
 > that sends your credentials in cleartext. Use a tunnel, a tailnet, or HTTPS.
@@ -115,6 +117,7 @@ session cookie is marked `Secure`.
 | `AI_BASE_URL` / `AI_MODEL` / `AI_API_KEY` | OpenAI-compatible backend |
 | `BIND_HOST` / `PORT` | network bind (default `127.0.0.1:5500`) |
 | `SECURE_COOKIES` | `1` when behind HTTPS |
+| `TRUST_PROXY` | `1` behind a reverse proxy, so rate limiting/lockout use the forwarded client IP |
 | `MONITORED_UNITS` | systemd units shown on the dashboard |
 | `PM2_COMMAND` | e.g. `sudo -n /root/.bun/bin/pm2` to monitor another user's PM2 |
 | `MYSQL_*` / `REDIS_*` | optional health probes |

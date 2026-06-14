@@ -508,3 +508,30 @@ select.field { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .fc-svcs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .fc-badge { font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-faint); font-family: var(--font-mono); }
 .fc-badge.ok { color: var(--green); border-color: var(--green-border); background: var(--green-soft); }
+
+/* ── Fleet: Add-server panel + enroll command ──────────────────────────────── */
+.fleet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.btn-add-server {
+  background: var(--accent); color: var(--on-accent); border: none;
+  border-radius: var(--radius-sm); padding: 7px 13px; font-weight: 600;
+  font-size: 13px; cursor: pointer;
+}
+.btn-add-server:hover { background: var(--accent-hover); }
+.add-server-panel {
+  background: var(--sidebar-bg); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+}
+.add-server-panel p { margin: 0 0 8px; color: var(--text-dim); font-size: 13px; }
+.enroll-cmd {
+  background: #07060400; background: rgba(0,0,0,0.30); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px; margin: 0 0 10px;
+  overflow-x: auto; white-space: pre; font-size: 12.5px; line-height: 1.5;
+}
+.enroll-cmd code { color: var(--accent-2); font-family: var(--mono, ui-monospace, monospace); }
+.add-server-actions { display: flex; align-items: center; gap: 12px; }
+.btn-copy {
+  background: transparent; color: var(--text-dim); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+}
+.btn-copy:hover { border-color: var(--accent-border); color: var(--text); }
+.enroll-note { color: var(--text-muted); font-size: 12px; }

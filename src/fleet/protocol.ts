@@ -8,8 +8,11 @@ import type { StatusSnapshot } from "../status.ts";
 export const HelloSchema = z.object({
   type: z.literal("hello"),
   token: z.string().max(512),
-  agentId: z.string().min(8).max(128),
-  hostname: z.string().max(255),
+  // Constrain identity to a safe charset so it can't carry markup/quotes that
+  // would break out of HTML attributes when rendered in the controller's Fleet
+  // view (defence-in-depth alongside escaping on the client).
+  agentId: z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/),
+  hostname: z.string().min(1).max(255).regex(/^[A-Za-z0-9._-]+$/),
   version: z.string().max(32).optional(),
 });
 export type Hello = z.infer<typeof HelloSchema>;

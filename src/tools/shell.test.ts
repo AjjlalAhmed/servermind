@@ -70,6 +70,18 @@ describe("run_shell enforces per-command argument policy", () => {
   test("disallowed flags are refused", async () => {
     expect(await rejected("df --output=source")).toBeTruthy();
   });
+  test("journalctl requires a managed-unit filter and rejects whole-journal reads", async () => {
+    // Without -u it would dump the entire merged system journal — refused now.
+    expect(await rejected("journalctl --no-pager")).toBeTruthy();
+    expect(await rejected("journalctl -n 100")).toBeTruthy();
+    // Positional MATCH expressions (the old bypass) are refused.
+    expect(await rejected("journalctl -u nginx _UID=0")).toBeTruthy();
+    expect(await rejected("journalctl _SYSTEMD_UNIT=ssh.service")).toBeTruthy();
+    // Unmanaged units are refused.
+    expect(await rejected("journalctl -u ssh")).toBeTruthy();
+    // A bounded read of a managed unit is allowed.
+    expect(await accepted("journalctl -u nginx -n 50 --no-pager")).toBeUndefined();
+  });
 });
 
 describe("run_shell accepts safe read-only diagnostics", () => {

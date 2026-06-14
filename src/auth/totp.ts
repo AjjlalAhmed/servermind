@@ -64,20 +64,27 @@ export function totp(secretBase32: string, atMs = Date.now()): string {
   return hotp(base32Decode(secretBase32), counter);
 }
 
-// Verify a user-supplied code, tolerating ±`window` steps of clock drift.
-// Constant-time compare so we don't leak which step matched.
-export function verifyTotp(secretBase32: string, token: string, window = 1, atMs = Date.now()): boolean {
+// Verify a user-supplied code, tolerating ±`window` steps of clock drift, and
+// return the matched counter step (or null). Callers persist the matched counter
+// to enforce RFC 6238 §5.2 one-time use. Constant-time compare across every
+// candidate so we don't leak which step matched.
+export function matchTotpCounter(secretBase32: string, token: string, window = 1, atMs = Date.now()): number | null {
   const cleaned = (token || "").replace(/\s+/g, "");
-  if (!/^\d{6}$/.test(cleaned)) return false;
+  if (!/^\d{6}$/.test(cleaned)) return null;
   const secret = base32Decode(secretBase32);
   const counter = Math.floor(atMs / 1000 / STEP_SECONDS);
-  let ok = false;
+  let matched: number | null = null;
   for (let i = -window; i <= window; i++) {
     const candidate = hotp(secret, counter + i);
     // compare every candidate (no early return) to keep timing uniform
-    if (timingSafeEqual(Buffer.from(candidate), Buffer.from(cleaned))) ok = true;
+    if (timingSafeEqual(Buffer.from(candidate), Buffer.from(cleaned))) matched = counter + i;
   }
-  return ok;
+  return matched;
+}
+
+// Boolean convenience wrapper (used by tests / non-login callers).
+export function verifyTotp(secretBase32: string, token: string, window = 1, atMs = Date.now()): boolean {
+  return matchTotpCounter(secretBase32, token, window, atMs) !== null;
 }
 
 // ── enrollment helpers ──────────────────────────────────────────────────────

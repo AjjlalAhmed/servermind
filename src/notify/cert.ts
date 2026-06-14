@@ -9,7 +9,11 @@ import type { Alert } from "./report.ts";
 
 export function certDaysLeft(host: string, port = 443): Promise<number> {
   return new Promise((resolve, reject) => {
-    const socket = tls.connect({ host, port, servername: host }, () => {
+    // rejectUnauthorized:false so the handshake COMPLETES even for an expired/
+    // untrusted/mismatched cert — otherwise it aborts before we can read the
+    // expiry date and the "expired" alert (the whole point) never fires. We only
+    // read valid_to, so accepting the unverified peer is safe here.
+    const socket = tls.connect({ host, port, servername: host, rejectUnauthorized: false }, () => {
       const cert = socket.getPeerCertificate();
       socket.end();
       const validTo = cert && (cert as { valid_to?: string }).valid_to;

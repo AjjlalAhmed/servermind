@@ -37,6 +37,24 @@ if (!controllerUrl || !token) {
   process.exit(1);
 }
 
+// The hello frame carries the (long-lived, shared) join token, so a plaintext
+// ws:// hop to a remote controller would leak it to any on-path observer. Require
+// wss:// unless the controller is local or insecure transport is explicitly
+// opted into (FLEET_ALLOW_INSECURE=1, e.g. the docker-compose simulation).
+{
+  const insecureOk = /^(1|true|yes)$/i.test((process.env.FLEET_ALLOW_INSECURE || "").trim());
+  let host = "";
+  try { host = new URL(controllerUrl).hostname; } catch { console.error(`agent: invalid SERVERMIND_CONTROLLER URL: ${controllerUrl}`); process.exit(1); }
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+  if (controllerUrl.startsWith("ws://") && !isLocal && !insecureOk) {
+    console.error(
+      `agent: refusing to send the join token over plaintext ws:// to '${host}'. ` +
+        `Use wss:// (recommended), or set FLEET_ALLOW_INSECURE=1 for trusted local/test networks.`,
+    );
+    process.exit(1);
+  }
+}
+
 const agentId = loadAgentId();
 console.log(`\n  ServerMind agent — ${hostname()} (${agentId.slice(0, 8)}…)`);
 console.log(`  → controller: ${controllerUrl}\n`);

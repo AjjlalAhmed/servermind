@@ -142,8 +142,8 @@ Isolate the controller (dedicated box) and treat its login as critical.
 1. Controller has a **join token** (rotatable) and/or pre-issued per-agent tokens.
 2. Deploy installs the agent with the controller URL + join token:
    ```bash
-   curl -fsSL https://servermind.dev/agent.sh | bash -s -- \
-     --controller wss://controller.example.com --token "$SM_JOIN_TOKEN"
+   curl -fsSL https://servermind.dev/install.sh | bash -s -- \
+     --controller wss://controller.example.com/fleet/agent --token "$SM_JOIN_TOKEN"
    ```
 3. On first connect the agent swaps the join token for its **own per-agent
    credential** (so the join token isn't its permanent key).
@@ -158,7 +158,7 @@ env:
 steps:
   - run: |
       for host in $SERVERS; do
-        ssh "$USER@$host" "curl -fsSL https://servermind.dev/agent.sh | bash -s -- \
+        ssh "$USER@$host" "curl -fsSL https://servermind.dev/install.sh | bash -s -- \
           --controller '$SM_CONTROLLER_URL' --token '$SM_JOIN_TOKEN'"
       done
 ```
@@ -206,7 +206,9 @@ same code can run in-process (standalone) or be driven over the wire (fleet).
 Agent connector (dial out, enroll, push `status`) + controller hub + SQLite
 registry + **fleet dashboard (read-only)**.
 - Delivers "**all reports in one place**" immediately — no remote commands yet.
-- Add `agent.sh` installer + agent-only run mode.
+- One installer (`install.sh`), role chosen by flags: default = controller (with
+  its built-in local agent, fleet on by default); `--controller URL --token T` =
+  agent-only run mode.
 
 ### Phase 2 — Remote management
 Controller routes `invoke`/`result` to a selected agent; **chat targets a server**;

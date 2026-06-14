@@ -247,7 +247,7 @@ AI_API_KEY=&lt;your key&gt;</code></pre></div>
         <div class="callout note"><span class="ct">Why this is fine</span>Over an SSH tunnel or tailnet, plain HTTP is safe — your password and TOTP code never cross the open internet.</div>
 
         <h3>Public domain over HTTPS</h3>
-        <p>Front it with a reverse proxy. The wizard detects Caddy or Nginx and prints a ready-to-paste config; set <code>SECURE_COOKIES=1</code> (it does this for you) so the session cookie is marked <code>Secure</code>.</p>
+        <p>Front it with a reverse proxy. The wizard detects Caddy or Nginx and prints a ready-to-paste config; set <code>SECURE_COOKIES=1</code> (it does this for you) so the session cookie is marked <code>Secure</code>, and set <code>TRUST_PROXY=1</code> so brute-force lockout and rate limiting use the real client IP from your proxy's <code>X-Forwarded-For</code> instead of the proxy's own address.</p>
         <div class="codeblock"><pre><code><span class="cmt"># Caddy — automatic HTTPS</span>
 servermind.example.com {
     reverse_proxy 127.0.0.1:5500 {
@@ -268,7 +268,7 @@ servermind.example.com {
           <li><strong>Apply changes</strong> — <code>pm2 reload servermind</code>.</li>
           <li><strong>Update</strong> — re-run the install command; it updates an existing install in place. (Your <code>.env</code> is never overwritten.)</li>
         </ul>
-        <p>First login: open the UI, enter your password and the current 6-digit TOTP code. To make a change to your server, flip <strong>“Arm mutations”</strong> in the UI first — it auto-disarms after a few minutes.</p>
+        <p>First login: open the UI, enter your password and the current 6-digit TOTP code. To make a change to your server, flip <strong>“Arm mutations”</strong> in the UI first — it clears itself after a single change (and auto-disarms after a few minutes either way), so each action you want is its own deliberate step.</p>
       </section>
 
       <!-- Email reports & alerts -->
@@ -316,7 +316,7 @@ servermind.example.com {
 <span class="prompt">$</span> echo 'SERVERMIND_CONTROLLER=wss://controller-host:5500/fleet/agent' &gt;&gt; .env
 <span class="prompt">$</span> echo 'FLEET_JOIN_TOKEN=&lt;same-token&gt;' &gt;&gt; .env
 <span class="prompt">$</span> pm2 start "bun run agent" --name servermind-agent &amp;&amp; pm2 save</code></pre></div>
-        <p>Use <code>wss://</code> when the controller is behind HTTPS (a domain via Caddy/Nginx), or <code>ws://</code> over a private network or Tailscale tailnet. The agent reconnects on its own if the controller restarts.</p>
+        <p>Use <code>wss://</code> when the controller is behind HTTPS (a domain via Caddy/Nginx) — recommended, since the join token travels in the connection. Plain <code>ws://</code> to a remote host is refused by default to avoid sending the token in cleartext; over a trusted private network or Tailscale tailnet where you accept that, add <code>FLEET_ALLOW_INSECURE=1</code> to the agent's <code>.env</code>. The agent reconnects on its own if the controller restarts.</p>
 
         <h3>3 · See your fleet</h3>
         <p>Open the controller's dashboard and click <strong>Fleet</strong> — every connected server appears with live CPU, memory, disk, and its Redis / MySQL / PM2 health. "Manage" a server to chat with just that box; reports and alerts from all of them arrive deduped in one inbox.</p>
@@ -351,7 +351,7 @@ servermind.example.com {
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
           <li><strong>No database.</strong> Settings live in a JSON file, sessions in memory — there is no SQL/ORM, so <strong>SQL injection has nothing to attack</strong>.</li>
-          <li><strong>Mutations gated.</strong> Restart/stop/start are refused unless you arm them via a server-side switch the model can't set itself — so prompt injection in tool output can't trigger changes.</li>
+          <li><strong>Mutations gated.</strong> Restart/stop/start are refused unless you arm them via a server-side switch the model can't set itself. The gate is re-checked on every call and an arm is consumed by a single change, so prompt injection in tool output can't silently flip the switch or chain extra changes.</li>
           <li><strong>Auth.</strong> Password + TOTP 2FA, argon2id hashing, HttpOnly / SameSite=Strict cookies, brute-force lockout, rate limiting, strict CSP.</li>
           <li><strong>Settings &amp; secrets.</strong> The dashboard edits a safe subset (email, alerts, monitoring, AI) — never auth, the service allowlist, or PM2 access. Writes are schema-validated and atomic; secret fields are <strong>encrypted at rest (AES-256-GCM)</strong> and masked in the API, never returned to the browser.</li>
           <li><strong>Yours.</strong> Runs entirely on your box; secrets stay in local files (chmod 600); nothing is sent to the project's authors.</li>
@@ -380,13 +380,13 @@ servermind.example.com {
         <p>PM2 is per-user. If your apps run under a different user (e.g. root), set <code>PM2_COMMAND="sudo -n /root/.bun/bin/pm2"</code> and grant a passwordless sudo rule — the wizard prints the exact line.</p>
 
         <h3>Login works locally but not behind Cloudflare/HTTPS</h3>
-        <p>Set <code>SECURE_COOKIES=1</code> so the session cookie is marked <code>Secure</code>, and make sure your proxy passes <code>X-Forwarded-Proto</code>. For streaming chat, disable response buffering (<code>flush_interval -1</code> in Caddy, <code>proxy_buffering off</code> in Nginx).</p>
+        <p>Set <code>SECURE_COOKIES=1</code> so the session cookie is marked <code>Secure</code>, and make sure your proxy passes <code>X-Forwarded-Proto</code>. Also set <code>TRUST_PROXY=1</code> so per-client rate limiting and lockout read the real visitor IP from the proxy rather than treating every request as one client. For streaming chat, disable response buffering (<code>flush_interval -1</code> in Caddy, <code>proxy_buffering off</code> in Nginx).</p>
 
         <h3>Test email fails with "SMTP 535"</h3>
         <p>535 means Gmail rejected the login. Use a <strong>Google App Password</strong> (16 chars), not your normal password, and paste it <strong>without spaces</strong> (<code>abcd efgh ijkl mnop</code> → <code>abcdefghijklmnop</code>). Confirm 2-Step Verification is on, host is <code>smtp.gmail.com</code>, and port is <code>465</code>.</p>
 
         <h3>An agent won't show up in the Fleet</h3>
-        <p>Check the agent's logs (<code>pm2 logs servermind-agent</code>). Most often the <code>FLEET_JOIN_TOKEN</code> doesn't match the controller's, or <code>SERVERMIND_CONTROLLER</code> is wrong — it must be the full WebSocket URL ending in <code>/fleet/agent</code> and reachable from the agent (try <code>curl</code>-ing the controller host). Use <code>wss://</code> if the controller is behind HTTPS; a closed login is <code>1008 unauthorized</code> (token mismatch).</p>
+        <p>Check the agent's logs (<code>pm2 logs servermind-agent</code>). Most often the <code>FLEET_JOIN_TOKEN</code> doesn't match the controller's, or <code>SERVERMIND_CONTROLLER</code> is wrong — it must be the full WebSocket URL ending in <code>/fleet/agent</code> and reachable from the agent (try <code>curl</code>-ing the controller host). Use <code>wss://</code> if the controller is behind HTTPS; a plain <code>ws://</code> URL to a remote host exits immediately unless you set <code>FLEET_ALLOW_INSECURE=1</code>. A closed login is <code>1008 unauthorized</code> (token mismatch).</p>
 
         <p style="margin-top:26px">Still stuck? Open an issue on <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>.</p>
       </section>

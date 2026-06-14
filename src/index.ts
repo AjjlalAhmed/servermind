@@ -14,8 +14,15 @@ import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
 import { localAgent, type Agent } from "./agent.ts";
 import { startWatcher } from "./notify/watcher.ts";
-import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket, isAgentConnected, removeAgent } from "./fleet/hub.ts";
+import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket, isAgentConnected, removeAgent, fleetTokenOk } from "./fleet/hub.ts";
 import { RemoteAgent, isAgentArmed } from "./fleet/remote.ts";
+import { MeshController } from "./fleet/mesh-controller.ts";
+import { controllerIp } from "./fleet/wireguard.ts";
+
+// The controller's WireGuard mesh manager — set on boot when config.mesh.enabled.
+// Routes reference it lazily, so it's fine that it's assigned after the routes
+// are defined (a request can't arrive before the server is listening).
+let meshController: MeshController | null = null;
 import { settingsForApi, updateSettings, getAI } from "./settings.ts";
 
 // Resolve which box a request targets: the local controller box by default, or a
@@ -177,7 +184,14 @@ app.get("/fleet", (c) => {
   const reg = fleetRegistry();
   const servers = (reg ? reg.list() : []).map((s) => ({ ...s, armed: isAgentArmed(s.id) }));
   // canChat = the controller's AI backend can drive a remote box (OpenAI-compatible).
-  return c.json({ enabled: fleetEnabled(), canChat: getAI().backend === "openai", servers });
+  // joinToken + mesh let the Fleet UI render the "Add server" enroll command.
+  return c.json({
+    enabled: fleetEnabled(),
+    canChat: getAI().backend === "openai",
+    mesh: config.mesh.enabled,
+    joinToken: fleetEnabled() ? config.fleet.joinToken : "",
+    servers,
+  });
 });
 
 app.use("/fleet/remove", requireAuth);
@@ -186,7 +200,34 @@ app.post("/fleet/remove", async (c) => {
   try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
   if (!body.server) return c.json({ error: "server is required" }, 400);
   removeAgent(body.server);
+  // Drop the revoked agent's WireGuard peer from the live interface too, so a
+  // removed box can't keep talking over the mesh.
+  if (meshController) await meshController.reapply();
   return c.json({ ok: true });
+});
+
+// Agent enrollment into the WireGuard mesh. Token-gated (agents have no session),
+// rate-limited, body-capped. The agent sends only its PUBLIC key; we return the
+// address + controller pubkey/endpoint it needs to build its own config. This is
+// the one bootstrap hop over the public port before traffic moves onto the mesh.
+app.use("/fleet/enroll", bodyLimit);
+app.post("/fleet/enroll", rateLimit({ limit: 20, windowMs: 60_000 }), async (c) => {
+  if (!meshController) return c.json({ error: "mesh is not enabled on this controller" }, 400);
+  let body: { token?: string; agentId?: string; hostname?: string; pubkey?: string };
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
+  if (!fleetTokenOk(String(body.token ?? ""))) return c.json({ error: "unauthorized" }, 401);
+  const id = String(body.agentId ?? "");
+  const hostname = String(body.hostname ?? "");
+  // Same charset constraints as the websocket hello (defence-in-depth vs markup).
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(id)) return c.json({ error: "invalid agentId" }, 400);
+  if (!/^[A-Za-z0-9._-]{1,255}$/.test(hostname)) return c.json({ error: "invalid hostname" }, 400);
+  fleetRegistry()?.register(id, hostname);
+  const res = await meshController.enroll({ id, hostname, pubkey: String(body.pubkey ?? "") });
+  if ("error" in res) return c.json({ error: res.error }, 400);
+  // Tell the agent how to reach us OVER the mesh from here on: the controller's
+  // mesh IP + app port. Plain ws:// is fine — WireGuard already encrypts the hop.
+  const controllerMeshUrl = `ws://${controllerIp({ cidr: res.cidr })}:${config.port}/fleet/agent`;
+  return c.json({ ...res, controllerMeshUrl });
 });
 
 // ─── Dashboard settings (authenticated; secrets masked in responses) ───────────
@@ -297,6 +338,19 @@ app.post("/chat", async (c) => {
 // Fleet controller hub — only initialized when FLEET_JOIN_TOKEN is set. Agents
 // connect over a WebSocket at /fleet/agent. Standalone leaves this null.
 const fleetHub = fleetEnabled() ? startFleetHub() : null;
+
+// WireGuard mesh: bring up wg0 from current registry state on boot. Only when
+// --mesh provisioned the host (config.mesh.enabled); standalone is untouched.
+if (fleetHub && config.mesh.enabled) {
+  const reg = fleetRegistry();
+  if (reg) {
+    meshController = new MeshController(reg);
+    meshController.start().then((r) => {
+      if (r.ok) console.log(`  Mesh: ${config.mesh.iface} up (${config.mesh.cidr}); agents enroll at /fleet/enroll`);
+      else console.error(`  Mesh: failed to bring up ${config.mesh.iface} — ${r.error}`);
+    });
+  }
+}
 
 const server = Bun.serve({
   hostname: config.bindHost,
