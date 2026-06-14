@@ -87,10 +87,17 @@ mkdir -p logs
 ok "Dependencies ready"
 
 # ── 6. setup wizard ────────────────────────────────────────────────────────────
-# curl | bash leaves stdin pointing at the script, so the interactive wizard must
-# read from the controlling terminal.
-step "Running setup wizard"
-if [ -e /dev/tty ]; then
+# Fresh install → run the wizard. Update (an .env already exists) → keep the
+# existing config and skip it, so re-running the installer to update doesn't
+# nag you through every question. Force it anytime with SERVERMIND_SETUP=1.
+# curl | bash leaves stdin pointing at the script, so the interactive wizard
+# must read from the controlling terminal.
+step "Configuration"
+if [ -f .env ] && [ "${SERVERMIND_SETUP:-}" != "1" ]; then
+  ok "Existing .env found — keeping your settings (wizard skipped)."
+  info "Change settings later:  cd $DIR && bun run setup"
+  info "Or re-run the installer with:  SERVERMIND_SETUP=1 to force the wizard"
+elif [ -e /dev/tty ]; then
   bun run setup < /dev/tty || die "Setup wizard did not complete. Re-run it with:  cd $DIR && bun run setup"
 else
   warn "No terminal available — skipping the wizard."
