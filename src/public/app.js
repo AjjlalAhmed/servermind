@@ -25,7 +25,7 @@ function showView(name) {
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
   $("#pageTitle").textContent = name === "assistant" ? "Chat" : name === "settings" ? "Settings" : name === "fleet" ? "Fleet" : (isController ? "This server" : "Overview");
   if (location.hash.slice(1) !== name) location.hash = name; // each view has its own URL: bookmarkable, back/forward works
-  if (name === "assistant") setTimeout(() => input.focus(), 30);
+  if (name === "assistant") { renderChatEmpty(); setTimeout(() => input.focus(), 30); }
   if (name === "settings") loadSettings();
   if (name === "fleet") loadFleet();
   closeDrawer();
@@ -286,8 +286,59 @@ function renderMarkdown(text) {
   flushList(); if (inCode) html += "</code></pre>"; return html;
 }
 
+// ─── Mindy, the mascot ───────────────────────────────────────────────────────────
+// The same daemon from the landing page, inlined so the chat has a face. One smooth
+// silhouette + a glow "mind" within; bobs & blinks when idle, tilts & sparks when
+// thinking. Add the `thinking` class to the wrapper to switch poses.
+const MINDY_BODY = "M130 46 C178 46 206 86 206 148 C206 182 206 176 200 196 C192 201 192 210 180 210 C170 210 165 197 155 197 C145 197 142 210 130 210 C118 210 115 197 105 197 C95 197 90 210 80 210 C70 210 68 201 60 196 C54 176 54 182 54 148 C54 86 82 46 130 46 Z";
+function mindySVG(size, cls) {
+  return `<svg class="mindy ${cls || ""}" width="${size}" height="${Math.round(size * 280 / 260)}" viewBox="0 0 260 280" role="img" aria-label="Mindy, the ServerMind daemon">
+    <defs>
+      <linearGradient id="m-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC15A"/><stop offset="1" stop-color="#F5A524"/></linearGradient>
+      <radialGradient id="m-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F5A524" stop-opacity=".55"/><stop offset="1" stop-color="#F5A524" stop-opacity="0"/></radialGradient>
+      <radialGradient id="m-mind" cx="50%" cy="42%" r="55%"><stop offset="0" stop-color="#FFEFC9" stop-opacity=".85"/><stop offset="60%" stop-color="#FBBF24" stop-opacity=".32"/><stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/></radialGradient>
+    </defs>
+    <ellipse class="m-aura" cx="130" cy="122" rx="108" ry="108" fill="url(#m-glow)"/>
+    <ellipse class="m-shadow" cx="130" cy="246" rx="60" ry="11" fill="#000"/>
+    <g class="m-bob">
+      <path d="${MINDY_BODY}" fill="url(#m-body)" stroke="rgba(255,255,255,.10)" stroke-width="1.5"/>
+      <ellipse cx="104" cy="86" rx="24" ry="15" fill="#fff" opacity=".07"/>
+      <g class="m-orb"><ellipse cx="130" cy="108" rx="50" ry="52" fill="url(#m-mind)"/></g>
+      <ellipse class="m-blush" cx="96" cy="150" rx="8" ry="4.5" fill="#FFD58A"/>
+      <ellipse class="m-blush" cx="164" cy="150" rx="8" ry="4.5" fill="#FFD58A"/>
+      <g class="m-eyes">
+        <ellipse cx="108" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+        <ellipse cx="152" cy="134" rx="15.5" ry="18" fill="#FFF7EA"/>
+        <ellipse cx="108" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+        <ellipse cx="152" cy="137" rx="7" ry="8" fill="#2A1D06"/>
+        <circle cx="104" cy="130" r="3" fill="#fff"/>
+        <circle cx="148" cy="130" r="3" fill="#fff"/>
+      </g>
+      <path class="m-smile" d="M120 159 Q130 167 140 159" fill="none" stroke="#FFF7EA" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+      <g class="m-sparks">
+        <circle cx="104" cy="36" r="2.6" fill="#FFEFC9"/>
+        <circle cx="130" cy="24" r="3" fill="#FFEFC9"/>
+        <circle cx="156" cy="38" r="2.2" fill="#FFEFC9"/>
+      </g>
+    </g>
+  </svg>`;
+}
+
+// Friendly empty state — shown when a chat has no messages yet, so the pane never
+// feels dead. Re-rendered on load, on clear, and when switching which server you chat.
+function renderChatEmpty() {
+  if (wrap.querySelector(".msg")) return;            // never clobber a live conversation
+  const where = chatServer ? ` about <b>${esc(chatServerName)}</b>` : "";
+  wrap.innerHTML = `<div class="chat-empty">
+    ${mindySVG(96, "")}
+    <div class="ce-title">Hi, I'm Mindy</div>
+    <div class="ce-sub">Your server's daemon, given a face. Ask me anything${where} — restart a service, free up disk, or just check how things are running.</div>
+  </div>`;
+}
+
 // ─── chat DOM ──────────────────────────────────────────────────────────────────────
 function addMsg(role) {
+  const empty = wrap.querySelector(".chat-empty"); if (empty) empty.remove();
   const m = document.createElement("div");
   m.className = "msg " + role;
   m.innerHTML = `<div class="who">${role === "user" ? "You" : "ServerMind"}</div><div class="body"></div>`;
@@ -296,11 +347,15 @@ function addMsg(role) {
 // autoscroll only when the user is already near the bottom (don't yank them up)
 function scroll(force) { const l = $("#log"); if (force || l.scrollHeight - l.scrollTop - l.clientHeight < 140) l.scrollTop = l.scrollHeight; }
 
-// animated "thinking" dots shown while waiting for the model / between tools
+// "thinking" indicator shown while waiting for the model / between tools — Mindy
+// tilts and sparks beside a row of pulsing dots so the wait feels alive.
 function setThinking(body, on) {
   let t = body.querySelector(".thinking");
-  if (on && !t) { t = document.createElement("div"); t.className = "thinking"; t.innerHTML = "<span></span><span></span><span></span>"; body.appendChild(t); scroll(); }
-  else if (!on && t) { t.remove(); }
+  if (on && !t) {
+    t = document.createElement("div"); t.className = "thinking";
+    t.innerHTML = mindySVG(30, "thinking") + `<span class="dots"><span></span><span></span><span></span></span>`;
+    body.appendChild(t); scroll();
+  } else if (!on && t) { t.remove(); }
 }
 
 function addToolCard(body, name, mutating) {
@@ -324,7 +379,7 @@ function setBusy(on) {
 input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; });
 input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send(); } });
 sendBtn.onclick = () => { if (busy) abortCtrl && abortCtrl.abort(); else send(); };
-$("#clear") && ($("#clear").onclick = () => { history = []; wrap.innerHTML = ""; renderHint(); });
+$("#clear") && ($("#clear").onclick = () => { history = []; wrap.innerHTML = ""; renderChatEmpty(); renderHint(); });
 
 function renderHint() {
   $("#hint").innerHTML = history.length ? "" : SUGGESTIONS.map((s) => `<span>${esc(s)}</span>`).join("");
@@ -572,7 +627,7 @@ function selectServer(id, host, isArmed) {
 }
 function clearServer() {
   chatServer = null; chatServerName = "";
-  history = []; wrap.innerHTML = "";
+  history = []; wrap.innerHTML = ""; renderChatEmpty();
   renderChatContext();
   fetch("/auth/me").then((r) => r.json()).then((me) => { armed = !!me.armed; renderArm(); }).catch(() => {});
 }
