@@ -91,6 +91,7 @@
         "Chat-based Linux server management in plain English",
         "Live dashboard: CPU, memory, disk, uptime, PM2 processes and service health",
         "Multi-server fleet: monitor and manage many Linux servers from one controller and one login; agents dial out over a single WebSocket so no inbound ports are opened",
+        "Optional self-hosted WireGuard mesh (--mesh) for the controller-to-agent link: no third-party coordination server, each agent's private key never leaves its box, per-agent keys are individually revocable",
         "Fleet-wide AI chat: ask one question across every server (e.g. which servers are unhealthy) and act on any of them",
         "Read-only command allowlist — no raw shell, command injection is structurally impossible",
         "Server-side \"arm\" switch required before any restart, stop or start",
@@ -472,10 +473,12 @@
       <div class="reveal">
         <h2>One login.<br />Your whole fleet.</h2>
         <p>Start with one server — that's the zero-config default. When you grow, point new boxes at a <strong>controller</strong> and watch every server light up in one dashboard. No per-server logins, no jumping between tabs.</p>
-        <p>Each box runs a lightweight <strong>agent</strong> that dials <em>out</em> to the controller over a single WebSocket — so there are no extra inbound ports to open, and the controller can be any one of your servers.</p>
+        <p>Each box runs a lightweight <strong>agent</strong> that dials <em>out</em> to the controller over a single WebSocket — so there are no extra inbound ports to open, and the controller can be any one of your servers. Add <code>--mesh</code> to route the whole link over a <strong>self-hosted WireGuard mesh</strong> — encrypted, with no third-party coordination server.</p>
         <ul class="checks">
           <li>One controller, one login — every server in a single view</li>
           <li>Agents dial out — no new inbound ports, no firewall changes</li>
+          <li>Add a server with one command from the dashboard; revoke in a click</li>
+          <li>Optional self-hosted <strong>WireGuard mesh</strong> — your keys, no third party</li>
           <li>Every box still enforces its <em>own</em> read-only allowlist + arm switch</li>
           <li>Reports &amp; alerts from the whole fleet, deduped into one inbox</li>
           <li>Ask once, across all of them — “which servers are unhealthy?”</li>
