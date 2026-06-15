@@ -23,6 +23,10 @@ curl -fsSL https://servermind.dev/install.sh | bash
   runs it, and explains what it finds.
 - **Live dashboard** — CPU, memory, disk, uptime, PM2 processes and service
   health at a glance, with sparklines and a status pulse, auto-refreshing.
+- **Health alerts & daily digest** — optional email reports: get alerted when
+  disk/memory cross a threshold, a monitored service drops, or a TLS cert nears
+  expiry, plus a daily health digest. Sends via SMTP or Resend; toggle it from
+  the dashboard.
 - **Bring your own AI** — the free **Gemini** tier, a **Claude Code**
   subscription, or any **OpenAI-compatible** API (Groq, OpenRouter, local
   Ollama). No lock-in.
@@ -121,6 +125,9 @@ proxy's own address.
 | `MONITORED_UNITS` | systemd units shown on the dashboard |
 | `PM2_COMMAND` | e.g. `sudo -n /root/.bun/bin/pm2` to monitor another user's PM2 |
 | `MYSQL_*` / `REDIS_*` | optional health probes |
+| `EMAIL_*` / `SMTP_*` / `RESEND_API_KEY` | email reports & alerts (SMTP or Resend) |
+| `ALERT_DISK_PCT` / `ALERT_MEM_PCT` / `ALERT_CERT_DAYS` | alert thresholds (disk %, mem %, cert-expiry days) |
+| `DIGEST_HOUR` | hour (0–23) to send the daily digest; unset = off |
 
 Auth (`SERVERMIND_PASSWORD_HASH`, `SERVERMIND_TOTP_SECRET`) is written by the
 wizard — never edit by hand. `.env` is gitignored and never leaves your server.
