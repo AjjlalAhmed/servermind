@@ -11,6 +11,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { TOOL_SPECS, dispatchTool, isMutatingCall } from "./tools/index.ts";
+// Importing settings runs its load() (side effect) so the custom-tool registry
+// is populated before we enumerate customToolSpecs() below.
+import "./settings.ts";
+import { customToolSpecs } from "./tools/custom.ts";
 
 const server = new McpServer({ name: "servermind", version: "1.0.0" });
 
@@ -24,7 +28,9 @@ function mutationsAllowed(): boolean {
   return !mutationConsumed && Date.now() < until;
 }
 
-for (const spec of TOOL_SPECS) {
+// Built-in tools plus user-defined custom tools (read at startup; the CLI spawns
+// a fresh subprocess per chat, so newly added tools appear without a restart).
+for (const spec of [...TOOL_SPECS, ...customToolSpecs()]) {
   server.tool(spec.name, spec.description, spec.schema, async (input: Record<string, unknown>) => {
     const allowMutations = mutationsAllowed();
     const result = await dispatchTool(spec.name, input, { allowMutations });

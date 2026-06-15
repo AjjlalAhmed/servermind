@@ -13,15 +13,33 @@ const FORBIDDEN_CHARS = /[;`]/; // single-statement only
 // FILE privilege — block those vectors explicitly.
 const FILE_VECTORS = /\b(into\s+(out|dump)file|load_file|load\s+data)\b/i;
 
-function baseArgs(): string[] {
-  const { user, host, port } = config.mysql;
-  const args = ["mysql", "-h", host, "-P", String(port), "--protocol=TCP", "-N", "-B"];
-  if (user) args.push("-u", user);
+// Shared read-only gate. Returns an error string, or null if the query is a
+// single safe SELECT/SHOW/DESCRIBE/EXPLAIN with no file vectors. Reused by the
+// built-in mysql probe AND by user-defined db_query custom tools.
+export function validateReadonlySql(query: string): string | null {
+  if (FORBIDDEN_CHARS.test(query)) return "query may not contain ';' or backticks (single read-only statement only)";
+  if (!READONLY_RE.test(query)) return "only read-only queries are allowed (SELECT/SHOW/DESCRIBE/EXPLAIN)";
+  if (FILE_VECTORS.test(query)) return "file access (INTO OUTFILE/DUMPFILE, LOAD_FILE, LOAD DATA) is not allowed";
+  return null;
+}
+
+export interface MysqlConn {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database?: string;
+}
+
+function baseArgs(conn: MysqlConn = config.mysql): string[] {
+  const args = ["mysql", "-h", conn.host, "-P", String(conn.port), "--protocol=TCP", "-N", "-B"];
+  if (conn.user) args.push("-u", conn.user);
+  if (conn.database) args.push("-D", conn.database);
   return args;
 }
 
-function env() {
-  return config.mysql.password ? { MYSQL_PWD: config.mysql.password } : {};
+function env(conn: MysqlConn = config.mysql) {
+  return conn.password ? { MYSQL_PWD: conn.password } : {};
 }
 
 export interface MysqlResult {
@@ -49,16 +67,17 @@ export async function mysqlShowDatabases(): Promise<MysqlResult> {
 }
 
 export async function mysqlQuery(query: string): Promise<MysqlResult> {
-  if (FORBIDDEN_CHARS.test(query)) {
-    return { ok: false, output: "", error: "query may not contain ';' or backticks (single read-only statement only)" };
-  }
-  if (!READONLY_RE.test(query)) {
-    return { ok: false, output: "", error: "only read-only queries are allowed (SELECT/SHOW/DESCRIBE/EXPLAIN)" };
-  }
-  if (FILE_VECTORS.test(query)) {
-    return { ok: false, output: "", error: "file access (INTO OUTFILE/DUMPFILE, LOAD_FILE, LOAD DATA) is not allowed" };
-  }
-  const r = await exec([...baseArgs(), "--table", "-e", query], { env: env(), timeoutMs: 12_000 });
+  return mysqlQueryOn(config.mysql, query);
+}
+
+// Run a single read-only query against an explicit connection. Used by
+// user-defined db_query custom tools, which point at their own DB (ideally a
+// SELECT-only user — see the dashboard note). The read-only gate is enforced
+// here too, so it holds no matter who calls.
+export async function mysqlQueryOn(conn: MysqlConn, query: string): Promise<MysqlResult> {
+  const bad = validateReadonlySql(query);
+  if (bad) return { ok: false, output: "", error: bad };
+  const r = await exec([...baseArgs(conn), "--table", "-e", query], { env: env(conn), timeoutMs: 12_000 });
   return {
     ok: r.ok,
     output: r.ok ? r.stdout.trim() : r.stderr || r.stdout,

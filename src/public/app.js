@@ -13,7 +13,7 @@ let lastStatus = null;
 const cpuHist = [], memHist = [];   // rolling samples for sparklines
 
 // ─── view switching + URL (hash) routing + mobile drawer ─────────────────────────
-const VIEWS = ["overview", "fleet", "assistant", "settings"];
+const VIEWS = ["overview", "fleet", "assistant", "tools", "settings"];
 const viewFromHash = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "overview"; };
 function showView(name) {
   if (!VIEWS.includes(name)) name = "overview";
@@ -23,10 +23,11 @@ function showView(name) {
     v.classList.toggle("flex", on && name === "assistant");
   });
   document.querySelectorAll("[data-nav]").forEach((n) => n.classList.toggle("active", n.dataset.nav === name));
-  $("#pageTitle").textContent = name === "assistant" ? "Chat" : name === "settings" ? "Settings" : name === "fleet" ? "Fleet" : (isController ? "This server" : "Overview");
+  $("#pageTitle").textContent = name === "assistant" ? "Chat" : name === "settings" ? "Settings" : name === "tools" ? "Tools" : name === "fleet" ? "Fleet" : (isController ? "This server" : "Overview");
   if (location.hash.slice(1) !== name) location.hash = name; // each view has its own URL: bookmarkable, back/forward works
   if (name === "assistant") { renderChatEmpty(); setTimeout(() => input.focus(), 30); }
   if (name === "settings") loadSettings();
+  if (name === "tools") loadTools();
   if (name === "fleet") loadFleet();
   closeDrawer();
 }
@@ -542,6 +543,148 @@ if ($("#setReportNow")) $("#setReportNow").onclick = async () => {
   try { await saveSettings(); const r = await fetch("/settings/report-now", { method: "POST" }); if (r.ok) setMsg("Report sent ✓"); else { const d = await r.json().catch(() => ({})); setMsg("Report failed: " + (d.error || r.status), true); } }
   catch (e) { setMsg(e.message, true); }
 };
+
+// ─── custom tools panel ──────────────────────────────────────────────────────
+let toolsState = [];
+let editingName = null;
+
+function tfMsg(t, bad) { const m = $("#tfMsg"); if (!m) return; m.textContent = t || ""; m.classList.toggle("bad", !!bad); m.classList.toggle("good", !!t && !bad); }
+function showKindFields() {
+  const kind = $("#tfKind").value;
+  document.querySelectorAll("#toolForm .tf-group").forEach((g) => g.classList.toggle("hidden", g.dataset.kind !== kind));
+}
+
+async function loadTools() {
+  try {
+    const r = await fetch("/settings/tools");
+    if (!r.ok) { if (r.status === 401) showGate("Session expired — sign in again."); return; }
+    const d = await r.json();
+    toolsState = d.tools || [];
+    renderTools();
+  } catch { /* keep last render */ }
+}
+
+function renderTools() {
+  const list = $("#toolList"), sum = $("#toolsSummary");
+  if (sum) sum.textContent = `Your tools · ${toolsState.length}`;
+  if (!list) return;
+  if (!toolsState.length) { list.innerHTML = `<div class="fleet-empty">No custom tools yet. Click <b>＋ Add tool</b> to create one.</div>`; return; }
+  list.innerHTML = toolsState.map(toolCard).join("");
+}
+
+function toolCard(t) {
+  const detail = t.kind === "command" ? esc(t.argv.join(" "))
+    : t.kind === "db_query" ? `${esc(t.engine)} · ${esc(t.query)}`
+    : t.kind === "http_check" ? esc(t.url)
+    : esc(t.path);
+  const tag = t.kind === "command" && t.mutating ? `<span class="ct-tag mut">mutating</span>` : `<span class="ct-tag">read-only</span>`;
+  return `<div class="ct-card">
+    <div class="ct-main">
+      <div class="ct-name">${esc(t.name)} <span class="ct-kind">${esc(t.kind)}</span> ${tag}</div>
+      <div class="ct-desc">${esc(t.description)}</div>
+      <div class="ct-detail mono">${detail}</div>
+    </div>
+    <div class="ct-actions">
+      <button class="btn ghost ct-edit" data-name="${esc(t.name)}">Edit</button>
+      <button class="btn ghost ct-del" data-name="${esc(t.name)}">Delete</button>
+    </div>
+  </div>`;
+}
+
+function openToolForm(tool) {
+  const isDb = tool && tool.kind === "db_query";
+  editingName = tool ? tool.name : null;
+  $("#toolForm").classList.remove("hidden");
+  $("#tfName").value = tool?.name || "";
+  $("#tfName").disabled = !!tool;               // name is the key — don't rename in place
+  $("#tfDesc").value = tool?.description || "";
+  $("#tfKind").value = tool?.kind || "command";
+  $("#tfArgv").value = tool?.kind === "command" ? tool.argv.join("\n") : "";
+  $("#tfMutating").checked = tool?.kind === "command" ? !!tool.mutating : false;
+  $("#tfTimeout").value = tool?.kind === "command" ? (tool.timeoutMs || "") : "";
+  $("#tfEngine").value = isDb ? tool.engine : "mysql";
+  $("#tfDbHost").value = isDb ? tool.conn.host : "";
+  $("#tfDbPort").value = isDb ? tool.conn.port : "";
+  $("#tfDbName").value = isDb ? (tool.conn.database || "") : "";
+  $("#tfDbUser").value = isDb ? (tool.conn.user || "") : "";
+  $("#tfDbPass").value = isDb ? (tool.conn.password || "") : ""; // masked from the server
+  $("#tfQuery").value = isDb ? tool.query : "";
+  $("#tfUrl").value = tool?.kind === "http_check" ? tool.url : "";
+  $("#tfStatus").value = tool?.kind === "http_check" ? (tool.expectStatus || "") : "";
+  $("#tfJsonPath").value = tool?.kind === "http_check" ? (tool.jsonPath || "") : "";
+  $("#tfExpected").value = tool?.kind === "http_check" ? (tool.expected || "") : "";
+  $("#tfPath").value = tool?.kind === "read_file" ? tool.path : "";
+  $("#tfLines").value = tool?.kind === "read_file" ? (tool.lines || "") : "";
+  showKindFields();
+  tfMsg("");
+  $("#toolForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function closeToolForm() { $("#toolForm").classList.add("hidden"); editingName = null; }
+
+// Assemble a manifest from the form fields, omitting blank optionals.
+function buildManifest() {
+  const kind = $("#tfKind").value;
+  const base = { kind, name: $("#tfName").value.trim(), description: $("#tfDesc").value.trim() };
+  if (kind === "command") {
+    const m = { ...base, argv: $("#tfArgv").value.split("\n").map((s) => s.trim()).filter(Boolean), mutating: $("#tfMutating").checked };
+    const t = $("#tfTimeout").value.trim(); if (t) m.timeoutMs = Number(t);
+    return m;
+  }
+  if (kind === "db_query") {
+    const conn = { host: $("#tfDbHost").value.trim(), port: Number($("#tfDbPort").value.trim() || 0), user: $("#tfDbUser").value.trim(), password: $("#tfDbPass").value };
+    const db = $("#tfDbName").value.trim(); if (db) conn.database = db;
+    return { ...base, engine: $("#tfEngine").value, conn, query: $("#tfQuery").value.trim() };
+  }
+  if (kind === "http_check") {
+    const m = { ...base, url: $("#tfUrl").value.trim() };
+    const s = $("#tfStatus").value.trim(); if (s) m.expectStatus = Number(s);
+    const jp = $("#tfJsonPath").value.trim(); if (jp) m.jsonPath = jp;
+    const ex = $("#tfExpected").value; if (ex !== "") m.expected = ex;
+    return m;
+  }
+  const m = { ...base, path: $("#tfPath").value.trim() };
+  const ln = $("#tfLines").value.trim(); if (ln) m.lines = Number(ln);
+  return m;
+}
+
+async function saveTools(nextList) {
+  const r = await fetch("/settings/tools", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tools: nextList }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || "save failed (" + r.status + ")");
+  toolsState = d.tools || [];
+}
+
+if ($("#tfKind")) $("#tfKind").onchange = showKindFields;
+if ($("#addToolBtn")) $("#addToolBtn").onclick = () => openToolForm(null);
+if ($("#tfCancel")) $("#tfCancel").onclick = closeToolForm;
+if ($("#tfSave")) $("#tfSave").onclick = async () => {
+  const b = $("#tfSave"); b.disabled = true; tfMsg("Saving…");
+  try {
+    const m = buildManifest();
+    const others = toolsState.filter((t) => t.name !== (editingName || m.name));
+    await saveTools([...others, m]);
+    renderTools(); closeToolForm();
+  } catch (e) { tfMsg(e.message, true); }
+  b.disabled = false;
+};
+if ($("#tfTest")) $("#tfTest").onclick = async () => {
+  tfMsg("Testing…");
+  try {
+    const r = await fetch("/settings/tools/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tool: buildManifest() }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { tfMsg(d.error || "test failed", true); return; }
+    tfMsg((d.ok ? "✓ " : "✗ ") + (d.output || "(no output)").slice(0, 300), !d.ok);
+  } catch (e) { tfMsg(e.message, true); }
+};
+if ($("#toolList")) $("#toolList").addEventListener("click", async (e) => {
+  const ed = e.target.closest(".ct-edit");
+  if (ed) { const t = toolsState.find((x) => x.name === ed.dataset.name); if (t) openToolForm(t); return; }
+  const dl = e.target.closest(".ct-del");
+  if (dl) {
+    if (!confirm(`Delete tool "${dl.dataset.name}"?`)) return;
+    try { await saveTools(toolsState.filter((t) => t.name !== dl.dataset.name)); renderTools(); } catch (err) { alert(err.message); }
+  }
+});
 
 // ─── fleet (controller multi-server view) ────────────────────────────────────
 function applyAuthState(me) {

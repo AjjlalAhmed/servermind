@@ -13,6 +13,7 @@
 import { config } from "./config.ts";
 import { getAI } from "./settings.ts";
 import { isMutatingCall } from "./tools/index.ts";
+import { customToolSpecs } from "./tools/custom.ts";
 import { armedUntilMs } from "./arm.ts";
 
 const ROOT = new URL("..", import.meta.url).pathname; // project root
@@ -33,7 +34,15 @@ const DISALLOWED_BUILTINS = [
   "ListMcpResources", "ReadMcpResource",
 ].join(",");
 
-const ALLOWED_TOOLS = "mcp__servermind__run_shell,mcp__servermind__pm2_action,mcp__servermind__service_action,mcp__servermind__check_port,mcp__servermind__read_log";
+const BUILTIN_TOOLS = ["run_shell", "pm2_action", "service_action", "check_port", "read_log"];
+// Tools the CLI may call: built-ins + the operator's custom tools, all under the
+// mcp__servermind__ prefix. Built fresh per chat so newly added custom tools are
+// allowed without a restart (the MCP subprocess registers them the same way).
+function allowedTools(): string {
+  return [...BUILTIN_TOOLS, ...customToolSpecs().map((s) => s.name)]
+    .map((n) => `mcp__servermind__${n}`)
+    .join(",");
+}
 
 export const SYSTEM_PROMPT = `You are ServerMind, an expert Linux/DevOps assistant embedded on a single Linux VPS. You help the operator monitor and manage this exact server through your tools.
 
@@ -142,7 +151,7 @@ export async function runChat(
     "--model", getAI().claudeModel,
     "--append-system-prompt", SYSTEM_PROMPT,
     "--mcp-config", mcpConfig,
-    "--allowedTools", ALLOWED_TOOLS,
+    "--allowedTools", allowedTools(),
     "--disallowedTools", DISALLOWED_BUILTINS,
     "--dangerously-skip-permissions",
   ];

@@ -41,6 +41,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 14.06A2 2 0 0 0 8.5 12.62L2.37 11.04a.5.5 0 0 1 0-.97L8.5 8.5a2 2 0 0 0 1.44-1.44L11.52.93a.5.5 0 0 1 .96 0l1.58 6.13A2 2 0 0 0 15.5 8.5l6.13 1.58a.5.5 0 0 1 0 .96L15.5 12.62a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
         Chat
       </div>
+      <div class="nav-item" data-nav="tools">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.7-.7-2.5z"/></svg>
+        Tools
+      </div>
       <div class="nav-item" data-nav="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
@@ -184,6 +188,78 @@
         <div class="set-bar">
           <button class="modal-btn" id="setSave" type="button">Save changes</button>
           <span class="set-msg" id="setMsg"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TOOLS ===== -->
+    <section data-view="tools" class="hidden">
+      <div class="settings">
+        <p class="set-intro">Custom tools you define here are added to the AI's toolbox. They're <b>frozen</b> — the AI can only trigger them, never change the command, query, path, or URL. Read-only by default; a command marked "changes things" needs the <b>Mutations</b> switch, exactly like restart/stop.</p>
+
+        <div class="tools-head">
+          <div class="section-title" id="toolsSummary">Your tools</div>
+          <button class="btn-add-server" id="addToolBtn" type="button">＋ Add tool</button>
+        </div>
+        <div id="toolList" class="tool-list"></div>
+
+        <!-- editor -->
+        <div class="panel set-panel hidden" id="toolForm">
+          <div class="set-grid">
+            <label class="set-field"><span>Name <span class="set-hint">a–z, 0–9, _ (3–40)</span></span><input class="field" id="tfName" placeholder="active_orders" autocomplete="off" /></label>
+            <label class="set-field"><span>Type</span><select class="field" id="tfKind">
+              <option value="command">Pinned command (A+)</option>
+              <option value="db_query">Read-only DB query</option>
+              <option value="http_check">HTTP health check</option>
+              <option value="read_file">Read a file</option>
+            </select></label>
+          </div>
+          <label class="set-field"><span>Description <span class="set-hint">what the AI sees — be specific</span></span><input class="field" id="tfDesc" placeholder="Count of active orders in the database" /></label>
+
+          <!-- command -->
+          <div class="tf-group" data-kind="command">
+            <label class="set-field"><span>Command <span class="set-hint">one argument per line — frozen, run with no shell</span></span><textarea class="field mono" id="tfArgv" rows="3" placeholder="redis-cli&#10;INFO&#10;memory"></textarea></label>
+            <div class="set-grid">
+              <label class="set-toggle"><input type="checkbox" id="tfMutating" /> <span>This changes things (requires Mutations armed)</span></label>
+              <label class="set-field"><span>Timeout ms <span class="set-hint">1000–60000, blank = 15000</span></span><input class="field" id="tfTimeout" placeholder="15000" /></label>
+            </div>
+          </div>
+
+          <!-- db_query -->
+          <div class="tf-group hidden" data-kind="db_query">
+            <div class="set-grid">
+              <label class="set-field"><span>Engine</span><select class="field" id="tfEngine"><option value="mysql">MySQL / MariaDB</option><option value="postgres">PostgreSQL</option></select></label>
+              <label class="set-field"><span>Host</span><input class="field" id="tfDbHost" placeholder="127.0.0.1" /></label>
+              <label class="set-field"><span>Port</span><input class="field" id="tfDbPort" placeholder="3306" /></label>
+              <label class="set-field"><span>Database <span class="set-hint">required for Postgres</span></span><input class="field" id="tfDbName" placeholder="app" /></label>
+              <label class="set-field"><span>User <span class="set-hint">use a read-only role</span></span><input class="field" id="tfDbUser" placeholder="readonly" /></label>
+              <label class="set-field"><span>Password</span><input class="field" type="password" id="tfDbPass" autocomplete="off" placeholder="••••••••" /></label>
+            </div>
+            <label class="set-field"><span>Query <span class="set-hint">read-only: SELECT / SHOW / EXPLAIN, single statement</span></span><textarea class="field mono" id="tfQuery" rows="2" placeholder="SELECT count(*) FROM orders WHERE status='active'"></textarea></label>
+          </div>
+
+          <!-- http_check -->
+          <div class="tf-group hidden" data-kind="http_check">
+            <label class="set-field"><span>URL <span class="set-hint">GET only, frozen</span></span><input class="field" id="tfUrl" placeholder="https://api.example.com/health" /></label>
+            <div class="set-grid">
+              <label class="set-field"><span>Expect status <span class="set-hint">optional</span></span><input class="field" id="tfStatus" placeholder="200" /></label>
+              <label class="set-field"><span>JSON path <span class="set-hint">optional, e.g. data.status</span></span><input class="field" id="tfJsonPath" placeholder="status" /></label>
+              <label class="set-field"><span>Expected value <span class="set-hint">optional</span></span><input class="field" id="tfExpected" placeholder="ok" /></label>
+            </div>
+          </div>
+
+          <!-- read_file -->
+          <div class="tf-group hidden" data-kind="read_file">
+            <label class="set-field"><span>Path <span class="set-hint">under /var/log, ~/.pm2/logs …</span></span><input class="field" id="tfPath" placeholder="/var/log/nginx/error.log" /></label>
+            <label class="set-field"><span>Lines <span class="set-hint">1–1000, blank = 100</span></span><input class="field" id="tfLines" placeholder="100" /></label>
+          </div>
+
+          <div class="set-bar">
+            <button class="modal-btn" id="tfSave" type="button">Save tool</button>
+            <button class="btn ghost" id="tfTest" type="button">Test</button>
+            <button class="btn ghost" id="tfCancel" type="button">Cancel</button>
+            <span class="set-msg" id="tfMsg"></span>
+          </div>
         </div>
       </div>
     </section>

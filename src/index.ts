@@ -23,7 +23,8 @@ import { controllerIp } from "./fleet/wireguard.ts";
 // Routes reference it lazily, so it's fine that it's assigned after the routes
 // are defined (a request can't arrive before the server is listening).
 let meshController: MeshController | null = null;
-import { settingsForApi, updateSettings, getAI } from "./settings.ts";
+import { settingsForApi, updateSettings, getAI, getCustomTools, SECRET_MASK } from "./settings.ts";
+import { validateCustomTools, runCustomTool } from "./tools/custom.ts";
 
 // Resolve which box a request targets: the local controller box by default, or a
 // connected remote agent by id. Returns an error marker if the agent is offline.
@@ -258,6 +259,48 @@ app.post("/settings/report-now", async (c) => {
   } catch (e) {
     return c.json({ error: (e as Error).message }, 500);
   }
+});
+
+// ─── Custom tools (Kind A + A+) — operator-defined, persisted as settings ──────
+// /settings/* is already auth-guarded above; add the body cap for the writers.
+app.use("/settings/tools", bodyLimit);
+app.use("/settings/tools/*", bodyLimit);
+
+// db_query connection passwords are masked in responses; the client sends the
+// mask back unchanged and updateSettings() preserves the stored secret.
+app.get("/settings/tools", (c) => c.json({ tools: settingsForApi().customTools }));
+
+// Replace the whole list (the panel maintains it client-side, like Settings).
+app.post("/settings/tools", async (c) => {
+  let body: { tools?: unknown };
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
+  const r = await updateSettings({ customTools: body.tools ?? [] }, clientKey(c));
+  return r.ok ? c.json({ tools: settingsForApi().customTools }) : c.json({ error: r.error }, 400);
+});
+
+app.delete("/settings/tools/:name", async (c) => {
+  const name = c.req.param("name");
+  const next = getCustomTools().filter((t) => t.name !== name);
+  const r = await updateSettings({ customTools: next }, clientKey(c));
+  return r.ok ? c.json({ tools: settingsForApi().customTools }) : c.json({ error: r.error }, 400);
+});
+
+// Dry-run a single manifest before saving. A mutating tool is gated on the arm
+// switch here too, so "Test" can't sneak a mutation past the disarmed state.
+app.post("/settings/tools/test", async (c) => {
+  let body: { tool?: any };
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid JSON body" }, 400); }
+  let manifest = body.tool;
+  if (manifest?.kind === "db_query" && manifest.conn && (manifest.conn.password === SECRET_MASK || !manifest.conn.password)) {
+    const prev = getCustomTools().find((t) => t.name === manifest.name && t.kind === "db_query");
+    if (prev?.kind === "db_query") manifest = { ...manifest, conn: { ...manifest.conn, password: prev.conn.password } };
+  }
+  const v = validateCustomTools([manifest]);
+  if (!v.ok) return c.json({ error: v.error }, 400);
+  const tool = v.tools[0]!;
+  if (tool.mutating && !localAgent.isArmed()) return c.json({ error: "arm mutations first to test a mutating tool" }, 400);
+  const r = await runCustomTool(tool);
+  return c.json({ ok: !r.isError, output: r.content });
 });
 
 app.post("/chat", async (c) => {

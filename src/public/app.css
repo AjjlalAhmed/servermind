@@ -575,3 +575,22 @@ select.field { appearance: none; -webkit-appearance: none; cursor: pointer; }
 }
 .btn-copy:hover { border-color: var(--accent-border); color: var(--text); }
 .enroll-note { color: var(--text-muted); font-size: 12px; }
+
+/* ─── custom tools panel ─── */
+.tools-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.tool-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.ct-card {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+}
+.ct-main { min-width: 0; }
+.ct-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ct-kind { font-size: 11px; color: var(--text-muted); font-weight: 500; border: 1px solid var(--border-strong); border-radius: 6px; padding: 1px 7px; }
+.ct-tag { font-size: 11px; font-weight: 600; border-radius: 6px; padding: 1px 7px; color: var(--green); background: rgba(0,0,0,0.18); }
+.ct-tag.mut { color: var(--accent-2); }
+.ct-desc { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+.ct-detail { color: var(--text-muted); font-size: 12px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.tf-group { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+textarea.field.mono { resize: vertical; min-height: 56px; line-height: 1.5; }
+@media (max-width: 560px) { .ct-card { flex-direction: column; } .ct-detail { white-space: normal; } }

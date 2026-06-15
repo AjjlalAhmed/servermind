@@ -7,6 +7,7 @@
 
 import { getAI } from "../settings.ts";
 import { isMutatingCall } from "../tools/index.ts";
+import { customToolSpecs } from "../tools/custom.ts";
 import { localAgent } from "../agent.ts";
 import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, isFleetTool, dispatchFleetTool } from "../fleet/tools.ts";
 import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
@@ -110,7 +111,18 @@ export async function runChat(
     return;
   }
 
-  const tools = opts.fleet ? [...TOOLS, ...FLEET_TOOLS] : TOOLS;
+  // User-defined custom tools run on THIS box, so only offer them when the chat
+  // targets the local controller — not when managing a remote agent (v1 is
+  // single-box; the remote wouldn't have them). They take no model input
+  // (frozen), so empty params.
+  const local = !opts.agent || opts.agent === localAgent;
+  const customTools = local
+    ? customToolSpecs().map((s) => ({
+        type: "function",
+        function: { name: s.name, description: s.description, parameters: { type: "object", properties: {}, required: [] } },
+      }))
+    : [];
+  const tools = [...TOOLS, ...customTools, ...(opts.fleet ? FLEET_TOOLS : [])];
   const messages: any[] = [
     { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") },
     ...history

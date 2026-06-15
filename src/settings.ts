@@ -17,8 +17,10 @@ import { z } from "zod";
 import { config } from "./config.ts";
 import { upsertEnv } from "./wizard/io.ts";
 import { encryptSecret, decryptSecret, hasKey, generateKey } from "./secret.ts";
+import { CustomToolsSchema, setCustomTools, validateCustomTools, type CustomTool } from "./tools/custom.ts";
 
 const MASK = "••••••••";
+export const SECRET_MASK = MASK;
 const DATA_DIR = new URL("../data/", import.meta.url).pathname;
 const STORE_FILE = DATA_DIR + "settings.json";
 const AUDIT_FILE = DATA_DIR + "settings-audit.log";
@@ -52,6 +54,9 @@ const Editable = z.object({
     apiKey: z.string().max(512),
     claudeModel: z.string().max(128),
   }),
+  // User-defined custom tools (Kind A + A+). Full schema + safety lives in
+  // tools/custom.ts; here it's just persisted (db_query passwords encrypted).
+  customTools: CustomToolsSchema,
 });
 type Store = z.infer<typeof Editable>;
 
@@ -68,7 +73,14 @@ const store: Store = {
   },
   monitoredUnits: [...config.monitoredUnits],
   ai: { backend: config.aiBackend === "openai" ? "openai" : "claude-code", baseUrl: config.aiBaseUrl, model: config.aiModel, apiKey: config.aiApiKey, claudeModel: config.model },
+  customTools: [],
 };
+
+// db_query connection passwords are the only secret inside a custom tool.
+const encTool = (t: CustomTool): CustomTool =>
+  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: encryptSecret(t.conn.password) } } : t;
+const decTool = (t: CustomTool): CustomTool =>
+  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: safeDecrypt(t.conn.password) } } : t;
 
 // ── persistence (atomic, encrypted secrets, chmod 600) ────────────────────────
 function ensureDir() { try { mkdirSync(DATA_DIR, { recursive: true }); } catch { /* ignore */ } }
@@ -88,6 +100,11 @@ function load(): void {
     Object.assign(store.ai, saved.ai);
     store.ai.apiKey = safeDecrypt(saved.ai.apiKey);
   }
+  if (Array.isArray(saved.customTools)) {
+    const v = validateCustomTools((saved.customTools as CustomTool[]).map(decTool));
+    store.customTools = v.ok ? v.tools : [];
+  }
+  setCustomTools(store.customTools);
 }
 
 function persist(): void {
@@ -97,6 +114,7 @@ function persist(): void {
     alerts: store.alerts,
     monitoredUnits: store.monitoredUnits,
     ai: { ...store.ai, apiKey: encryptSecret(store.ai.apiKey) },
+    customTools: store.customTools.map(encTool),
   };
   const tmp = STORE_FILE + ".tmp";
   writeFileSync(tmp, JSON.stringify(out, null, 2), { mode: 0o600 });
@@ -124,7 +142,20 @@ export const getEmail = () => store.email;
 export const getAlerts = () => store.alerts;
 export const getMonitoredUnits = () => store.monitoredUnits;
 export const getAI = () => store.ai;
+export const getCustomTools = () => store.customTools;
 export const emailEnabled = () => store.email.enabled && store.email.to !== "";
+
+// db_query passwords are masked for the API; new values come back in via the
+// unmask step in updateSettings (mask/empty = keep the stored secret).
+const maskTool = (t: CustomTool): CustomTool =>
+  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: t.conn.password ? MASK : "" } } : t;
+function unmaskTool(t: any, current: CustomTool[]): any {
+  if (!t || t.kind !== "db_query" || !t.conn) return t;
+  const pw = t.conn.password;
+  if (pw !== MASK && pw !== "" && pw != null) return t; // a new password was provided
+  const prev = current.find((c) => c.name === t.name && c.kind === "db_query") as Extract<CustomTool, { kind: "db_query" }> | undefined;
+  return { ...t, conn: { ...t.conn, password: prev?.conn.password ?? "" } };
+}
 
 // ── API view: secrets are masked, never returned in clear ─────────────────────
 export function settingsForApi() {
@@ -137,6 +168,7 @@ export function settingsForApi() {
     alerts: { ...store.alerts },
     monitoredUnits: store.monitoredUnits,
     ai: { backend: store.ai.backend, baseUrl: store.ai.baseUrl, model: store.ai.model, apiKey: store.ai.apiKey ? MASK : "", claudeModel: store.ai.claudeModel },
+    customTools: store.customTools.map(maskTool),
   };
 }
 
@@ -179,6 +211,12 @@ export async function updateSettings(patch: any, ip = "?"): Promise<{ ok: boolea
     if (!keepSecret(ai.apiKey)) cand.ai.apiKey = String(ai.apiKey).trim();
     if (typeof ai.claudeModel === "string") cand.ai.claudeModel = ai.claudeModel.trim();
   }
+  if (patch.customTools !== undefined) {
+    const incoming = Array.isArray(patch.customTools) ? patch.customTools : [];
+    const v = validateCustomTools(incoming.map((t: any) => unmaskTool(t, store.customTools)));
+    if (!v.ok) return { ok: false, error: v.error };
+    cand.customTools = v.tools;
+  }
 
   const parsed = Editable.safeParse(cand);
   if (!parsed.success) {
@@ -188,8 +226,9 @@ export async function updateSettings(patch: any, ip = "?"): Promise<{ ok: boolea
   try {
     await ensureKey(); // need a key before encrypting on persist
     Object.assign(store, parsed.data);
+    setCustomTools(store.customTools); // keep the live tool registry in sync
     persist();
-    audit(Object.keys(patch).filter((k) => ["email", "alerts", "monitoredUnits", "ai"].includes(k)), ip);
+    audit(Object.keys(patch).filter((k) => ["email", "alerts", "monitoredUnits", "ai", "customTools"].includes(k)), ip);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

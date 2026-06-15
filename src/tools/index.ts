@@ -11,6 +11,7 @@ import { pm2Action, type Pm2Action } from "./pm2.ts";
 import { serviceAction, type ServiceAction } from "./service.ts";
 import { checkPort } from "./port.ts";
 import { readLog } from "./log.ts";
+import { dispatchCustomTool, isCustomTool, customToolMutating } from "./custom.ts";
 
 export interface ToolSpec {
   name: string;
@@ -76,6 +77,9 @@ export function isMutatingCall(name: string, input: any): boolean {
   const bare = name.replace(/^mcp__[^_]+__/, "");
   if (bare === "pm2_action") return ["restart", "stop", "start"].includes(input?.action);
   if (bare === "service_action") return ["start", "stop", "restart", "enable"].includes(input?.action);
+  // A custom "command" tool the operator flagged as mutating gates on the arm
+  // switch too, identically to the built-in mutations above.
+  if (isCustomTool(bare)) return customToolMutating(bare);
   return false;
 }
 
@@ -127,8 +131,13 @@ export async function dispatchTool(
         const r = await readLog(String(input?.path), input?.lines);
         return wrap(r.ok, r.error ? `ERROR: ${r.error}` : r.content);
       }
-      default:
+      default: {
+        // User-defined custom tools (db_query / http_check / read_file /
+        // command). The arm gate above already ran via isMutatingCall, so a
+        // mutating custom tool is refused here when disarmed.
+        if (isCustomTool(name)) return await dispatchCustomTool(name);
         return err(`unknown tool: ${name}`);
+      }
     }
   } catch (e) {
     return err(`tool execution threw: ${(e as Error).message}`);
