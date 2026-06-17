@@ -346,6 +346,50 @@ servermind.example.com {
           <li><strong>Read a file</strong> — tail a <strong>frozen</strong> path, confined to the same safe roots as the log reader (<code>/var/log</code>, PM2 logs…).</li>
         </ul>
 
+        <h3>Add one, step by step</h3>
+        <ol>
+          <li>Open the dashboard, click <strong>Tools</strong> in the sidebar, then <strong>＋ Add tool</strong>.</li>
+          <li>Give it a <strong>name</strong> (lowercase letters, numbers, underscores — e.g. <code>active_orders</code>) and a one-line <strong>description</strong>. The description is what the AI reads to decide when to reach for the tool, so be specific — "count of currently-active orders", not just "orders".</li>
+          <li>Pick a <strong>type</strong> and fill its fields (below).</li>
+          <li>Click <strong>Test</strong> to run it once and see the live output — fix anything before saving.</li>
+          <li><strong>Save tool.</strong> It's added to the assistant immediately, on both AI backends — no restart.</li>
+        </ol>
+
+        <h3>Fields for each type</h3>
+        <p><strong>Pinned command</strong> — enter the command <em>one argument per line</em> (it's run with no shell, so don't quote or chain). Tick <em>"this changes things"</em> only if it mutates state; that puts it behind the arm switch. Optional timeout (ms).</p>
+        <div class="codeblock"><pre><code>redis-cli
+INFO
+memory</code></pre></div>
+        <p><strong>Read-only DB query</strong> — choose the engine (MySQL/MariaDB or PostgreSQL), fill <code>host</code>, <code>port</code>, <code>database</code>, <code>user</code>, <code>password</code>, and the frozen <code>query</code>. Example: a MySQL tool on <code>127.0.0.1:3306</code>, database <code>appdb</code>, user <code>sm_ro</code>, query:</p>
+        <div class="codeblock"><pre><code>SELECT COUNT(*) AS active_orders FROM orders WHERE status = 'active'</code></pre></div>
+        <p><strong>DB console</strong> — the same connection fields, but <em>no</em> query: the AI writes a read-only <code>SELECT</code> each time you ask. Point it at your orders database and then ask "break down orders by status" or "who are our biggest customers?".</p>
+        <p><strong>HTTP health check</strong> — a frozen <code>url</code> (GET), plus optional checks: an expected status code, and/or a JSON field path and its expected value (e.g. path <code>status</code> equals <code>ok</code>).</p>
+        <p><strong>Read a file</strong> — a frozen absolute <code>path</code> under a safe root (<code>/var/log/…</code>, <code>~/.pm2/logs/…</code>) and an optional line count.</p>
+
+        <h3>Recommended: a read-only database user</h3>
+        <p>For any DB tool, don't reuse an admin login — create a dedicated user that can only <code>SELECT</code>, scoped to just the database you want the assistant to see. That's the real boundary; the in-app read-only gate is a second layer on top.</p>
+        <div class="codeblock"><pre><code><span class="cmt">-- MySQL / MariaDB</span>
+CREATE USER 'sm_ro'@'%' IDENTIFIED BY 'a-strong-password';
+GRANT SELECT ON appdb.* TO 'sm_ro'@'%';   <span class="cmt">-- only the DB you want exposed</span>
+FLUSH PRIVILEGES;</code></pre></div>
+        <div class="codeblock"><pre><code><span class="cmt">-- PostgreSQL</span>
+CREATE ROLE sm_ro LOGIN PASSWORD 'a-strong-password';
+GRANT CONNECT ON DATABASE appdb TO sm_ro;
+GRANT USAGE ON SCHEMA public TO sm_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO sm_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO sm_ro;</code></pre></div>
+
+        <h3>Test, edit, remove</h3>
+        <p>Every tool has a <strong>Test</strong> button that runs it once and shows the output (a DB console with no query you typed runs a <code>SELECT 1</code> connectivity check). Each tool card has <strong>Edit</strong> and <strong>Delete</strong>. A pinned command marked "changes things" won't Test or run unless <strong>Mutations</strong> (top-right) are armed — the same gate as a service restart.</p>
+
+        <h3>Use it — just ask</h3>
+        <p>Once saved, the tool is in the assistant's toolbox. Go to <strong>Chat</strong> and ask in plain English; the AI matches your question to the tool's description and runs it:</p>
+        <ul>
+          <li><em>"How many active orders do we have?"</em> → your <code>active_orders</code> query</li>
+          <li><em>"Break down orders by status."</em> → the AI writes that <code>SELECT</code> through your DB console</li>
+          <li><em>"Is the API healthy?"</em> → your HTTP health check</li>
+        </ul>
+
         <h3>How the safety holds</h3>
         <p>Custom tools never loosen the guardrails — they're enforced the same way the built-ins are:</p>
         <ul>
