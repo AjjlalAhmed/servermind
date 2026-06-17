@@ -1,21 +1,50 @@
 # Local fleet SIMULATION — a controller + four "real-looking" agents that run
-# PM2 (demo processes) and probe a shared Redis + MariaDB, so the dashboard shows
-# live Redis / MySQL / PM2 data. NOT for production.
+# PM2 (demo processes) and probe a shared Redis + MariaDB + PostgreSQL, so the
+# dashboard shows live Redis / MySQL / PM2 data. NOT for production.
 #
 #   1. Create the controller login (once):   bun run setup-auth   (writes .env)
 #   2. docker compose -f docker-compose.fleet.yml up --build
 #   3. http://localhost:5500 → log in → Fleet → "Manage" a server → its Overview
 #      shows Redis ✓, MySQL ✓, and the demo PM2 processes.
 #
-# systemd-based service tiles are off here (MONITORED_UNITS="") because containers
-# don't run systemd; Redis/MySQL/PM2 use direct probes, so they work.
+# Custom tools are auto-seeded (turnkey, reproducible) from docker/sim-tools/*.json:
+#   • controller → orders_db (MySQL), hr_db (MySQL), analytics_db (Postgres),
+#     active_orders (frozen), server_uptime (command), self_health (http_check)
+#   • agent-web  → orders_db / active_orders (its own MySQL data)
+#   • agent-db   → analytics_db / signups_total (its own Postgres data)
+# Databases are auto-seeded with varied data + a least-privilege read-only role
+# ("ro") via docker/initdb/*. systemd service tiles are off (no systemd in a
+# container); Redis/MySQL/PM2/DB tools use direct probes/clients.
 
 x-join-token: &join "sim-join-token-change-me"
+
+# Shared agent environment (each agent overrides id + its own seed file).
+x-agent-env: &agent-env
+  SERVERMIND_CONTROLLER: "ws://controller:5500/fleet/agent"
+  FLEET_ALLOW_INSECURE: "1"     # trusted internal docker network only — prod must use wss://
+  FLEET_JOIN_TOKEN: *join
+  # Lets each agent encrypt/decrypt its own custom-tool db passwords (sim only;
+  # a real agent generates its own key). Shared value keeps seed + runtime in sync.
+  SETTINGS_KEY: "c2ltLWFnZW50LXNldHRpbmdzLWtleS0wMDAwMDAwMDA="
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  MYSQL_HOST: "mysql"
+  MYSQL_PORT: "3306"
+  MYSQL_USER: "sm"
+  MYSQL_PASSWORD: "sim"
+  MONITORED_UNITS: ""           # no systemd in a container
+
+x-agent: &agent
+  build:
+    context: .
+    dockerfile: Dockerfile.agent-sim
+  depends_on: [controller, redis, mysql, postgres]
 
 services:
   controller:
     build: .
-    command: bun run start
+    # Seed the controller's own custom tools, then start.
+    command: sh -c "bun run scripts/sim-seed-tools.ts; bun run start"
     env_file: .env
     environment:
       FLEET_JOIN_TOKEN: *join
@@ -23,8 +52,10 @@ services:
       PORT: "5500"
       SECURE_COOKIES: ""
       MONITORED_UNITS: ""          # controller box: no systemd service tiles
+      SIM_SEED_FILE: "/app/docker/sim-tools/controller.json"
     ports:
       - "5500:5500"
+    depends_on: [mysql, postgres]
 
   redis:
     image: redis:7-alpine
@@ -36,25 +67,24 @@ services:
       MARIADB_DATABASE: "appdb"
       MARIADB_USER: "sm"
       MARIADB_PASSWORD: "sim"
+    volumes:
+      - ./docker/initdb/mysql:/docker-entrypoint-initdb.d:ro
 
-  agent-web: &agent
-    build:
-      context: .
-      dockerfile: Dockerfile.agent-sim
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: "sim"
+      POSTGRES_DB: "analytics"
+    volumes:
+      - ./docker/initdb/postgres:/docker-entrypoint-initdb.d:ro
+
+  agent-web:
+    <<: *agent
     hostname: agent-web
-    environment: &agent-env
-      SERVERMIND_CONTROLLER: "ws://controller:5500/fleet/agent"
-      FLEET_ALLOW_INSECURE: "1"     # trusted internal docker network only — prod must use wss://
-      FLEET_JOIN_TOKEN: *join
+    environment:
+      <<: *agent-env
       SERVERMIND_AGENT_ID: "sim-agent-web-00000001"
-      REDIS_HOST: "redis"
-      REDIS_PORT: "6379"
-      MYSQL_HOST: "mysql"
-      MYSQL_PORT: "3306"
-      MYSQL_USER: "sm"
-      MYSQL_PASSWORD: "sim"
-      MONITORED_UNITS: ""          # no systemd in a container
-    depends_on: [controller, redis, mysql]
+      SIM_SEED_FILE: "/app/docker/sim-tools/agent-web.json"
 
   agent-db:
     <<: *agent
@@ -62,6 +92,7 @@ services:
     environment:
       <<: *agent-env
       SERVERMIND_AGENT_ID: "sim-agent-db-00000001"
+      SIM_SEED_FILE: "/app/docker/sim-tools/agent-db.json"
 
   agent-cache:
     <<: *agent

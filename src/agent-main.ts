@@ -13,6 +13,10 @@ import { hostname } from "node:os";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { config } from "./config.ts";
+// Side-effect import: runs settings load(), which populates this box's custom
+// tool registry (decrypting any db passwords with SETTINGS_KEY) so the connector
+// can advertise them and dispatchTool can run them locally.
+import "./settings.ts";
 import { startAgentConnector } from "./fleet/connector.ts";
 
 // A stable per-agent id, persisted so the controller recognizes this box across

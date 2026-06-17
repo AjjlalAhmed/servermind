@@ -21,6 +21,9 @@ export function isAgentArmed(agentId: string): boolean {
 export class RemoteAgent implements Agent {
   constructor(private readonly agentId: string) {}
 
+  // The agent id, so the controller can look up this box's advertised tools.
+  get id(): string { return this.agentId; }
+
   async status(): Promise<StatusSnapshot> {
     const s = fleetRegistry()?.list().find((x) => x.id === this.agentId)?.status;
     if (!s) throw new Error(`no status yet for agent ${this.agentId}`);

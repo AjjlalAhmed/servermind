@@ -209,7 +209,8 @@
             <label class="set-field"><span>Name <span class="set-hint">a–z, 0–9, _ (3–40)</span></span><input class="field" id="tfName" placeholder="active_orders" autocomplete="off" /></label>
             <label class="set-field"><span>Type</span><select class="field" id="tfKind">
               <option value="command">Pinned command (A+)</option>
-              <option value="db_query">Read-only DB query</option>
+              <option value="db_query">Read-only DB query (frozen)</option>
+              <option value="db_console">DB console (AI writes the query)</option>
               <option value="http_check">HTTP health check</option>
               <option value="read_file">Read a file</option>
             </select></label>
@@ -217,7 +218,7 @@
           <label class="set-field"><span>Description <span class="set-hint">what the AI sees — be specific</span></span><input class="field" id="tfDesc" placeholder="Count of active orders in the database" /></label>
 
           <!-- command -->
-          <div class="tf-group" data-kind="command">
+          <div class="tf-group" data-kinds="command">
             <label class="set-field"><span>Command <span class="set-hint">one argument per line — frozen, run with no shell</span></span><textarea class="field mono" id="tfArgv" rows="3" placeholder="redis-cli&#10;INFO&#10;memory"></textarea></label>
             <div class="set-grid">
               <label class="set-toggle"><input type="checkbox" id="tfMutating" /> <span>This changes things (requires Mutations armed)</span></label>
@@ -225,8 +226,8 @@
             </div>
           </div>
 
-          <!-- db_query -->
-          <div class="tf-group hidden" data-kind="db_query">
+          <!-- DB connection — shared by db_query (frozen) and db_console (AI writes SQL) -->
+          <div class="tf-group hidden" data-kinds="db_query db_console">
             <div class="set-grid">
               <label class="set-field"><span>Engine</span><select class="field" id="tfEngine"><option value="mysql">MySQL / MariaDB</option><option value="postgres">PostgreSQL</option></select></label>
               <label class="set-field"><span>Host</span><input class="field" id="tfDbHost" placeholder="127.0.0.1" /></label>
@@ -235,11 +236,20 @@
               <label class="set-field"><span>User <span class="set-hint">use a read-only role</span></span><input class="field" id="tfDbUser" placeholder="readonly" /></label>
               <label class="set-field"><span>Password</span><input class="field" type="password" id="tfDbPass" autocomplete="off" placeholder="••••••••" /></label>
             </div>
+          </div>
+
+          <!-- db_query: the operator freezes the exact query -->
+          <div class="tf-group hidden" data-kinds="db_query">
             <label class="set-field"><span>Query <span class="set-hint">read-only: SELECT / SHOW / EXPLAIN, single statement</span></span><textarea class="field mono" id="tfQuery" rows="2" placeholder="SELECT count(*) FROM orders WHERE status='active'"></textarea></label>
           </div>
 
+          <!-- db_console: no frozen query — the AI writes one each call -->
+          <div class="tf-group hidden" data-kinds="db_console">
+            <p class="tf-note">The AI writes a single read-only <code>SELECT</code> each time it's called and runs it against this connection. Writes, multiple statements, and file access are blocked automatically. <b>Point this at a read-only DB user</b> — that's what limits what the AI can read.</p>
+          </div>
+
           <!-- http_check -->
-          <div class="tf-group hidden" data-kind="http_check">
+          <div class="tf-group hidden" data-kinds="http_check">
             <label class="set-field"><span>URL <span class="set-hint">GET only, frozen</span></span><input class="field" id="tfUrl" placeholder="https://api.example.com/health" /></label>
             <div class="set-grid">
               <label class="set-field"><span>Expect status <span class="set-hint">optional</span></span><input class="field" id="tfStatus" placeholder="200" /></label>
@@ -249,7 +259,7 @@
           </div>
 
           <!-- read_file -->
-          <div class="tf-group hidden" data-kind="read_file">
+          <div class="tf-group hidden" data-kinds="read_file">
             <label class="set-field"><span>Path <span class="set-hint">under /var/log, ~/.pm2/logs …</span></span><input class="field" id="tfPath" placeholder="/var/log/nginx/error.log" /></label>
             <label class="set-field"><span>Lines <span class="set-hint">1–1000, blank = 100</span></span><input class="field" id="tfLines" placeholder="100" /></label>
           </div>

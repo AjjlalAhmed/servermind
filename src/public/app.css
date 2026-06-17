@@ -592,5 +592,7 @@ select.field { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .ct-detail { color: var(--text-muted); font-size: 12px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ct-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .tf-group { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.tf-note { margin: 0; padding: 11px 13px; font-size: 13px; line-height: 1.55; color: var(--text-dim); background: rgba(0,0,0,0.18); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tf-note code { font-family: var(--font-mono); font-size: 12px; color: var(--accent-2); }
 textarea.field.mono { resize: vertical; min-height: 56px; line-height: 1.5; }
 @media (max-width: 560px) { .ct-card { flex-direction: column; } .ct-detail { white-space: normal; } }

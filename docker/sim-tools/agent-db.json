@@ -1,0 +1,17 @@
+[
+  {
+    "kind": "db_console",
+    "name": "analytics_db",
+    "description": "Query the ANALYTICS database (Postgres) on THIS server (db): signups, events, plans, purchases. Read-only.",
+    "engine": "postgres",
+    "conn": { "host": "postgres", "port": 5432, "user": "ro", "password": "sim", "database": "analytics" }
+  },
+  {
+    "kind": "db_query",
+    "name": "signups_total",
+    "description": "Total number of signups on this server",
+    "engine": "postgres",
+    "conn": { "host": "postgres", "port": 5432, "user": "ro", "password": "sim", "database": "analytics" },
+    "query": "SELECT COUNT(*) AS signups FROM signups"
+  }
+]

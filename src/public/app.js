@@ -551,7 +551,10 @@ let editingName = null;
 function tfMsg(t, bad) { const m = $("#tfMsg"); if (!m) return; m.textContent = t || ""; m.classList.toggle("bad", !!bad); m.classList.toggle("good", !!t && !bad); }
 function showKindFields() {
   const kind = $("#tfKind").value;
-  document.querySelectorAll("#toolForm .tf-group").forEach((g) => g.classList.toggle("hidden", g.dataset.kind !== kind));
+  document.querySelectorAll("#toolForm .tf-group").forEach((g) => {
+    const kinds = (g.dataset.kinds || "").split(/\s+/);
+    g.classList.toggle("hidden", !kinds.includes(kind));
+  });
 }
 
 async function loadTools() {
@@ -575,6 +578,7 @@ function renderTools() {
 function toolCard(t) {
   const detail = t.kind === "command" ? esc(t.argv.join(" "))
     : t.kind === "db_query" ? `${esc(t.engine)} · ${esc(t.query)}`
+    : t.kind === "db_console" ? `${esc(t.engine)} · AI-written SELECT (read-only)`
     : t.kind === "http_check" ? esc(t.url)
     : esc(t.path);
   const tag = t.kind === "command" && t.mutating ? `<span class="ct-tag mut">mutating</span>` : `<span class="ct-tag">read-only</span>`;
@@ -592,7 +596,7 @@ function toolCard(t) {
 }
 
 function openToolForm(tool) {
-  const isDb = tool && tool.kind === "db_query";
+  const isDb = tool && (tool.kind === "db_query" || tool.kind === "db_console");
   editingName = tool ? tool.name : null;
   $("#toolForm").classList.remove("hidden");
   $("#tfName").value = tool?.name || "";
@@ -608,7 +612,7 @@ function openToolForm(tool) {
   $("#tfDbName").value = isDb ? (tool.conn.database || "") : "";
   $("#tfDbUser").value = isDb ? (tool.conn.user || "") : "";
   $("#tfDbPass").value = isDb ? (tool.conn.password || "") : ""; // masked from the server
-  $("#tfQuery").value = isDb ? tool.query : "";
+  $("#tfQuery").value = tool?.kind === "db_query" ? tool.query : ""; // frozen query is db_query only
   $("#tfUrl").value = tool?.kind === "http_check" ? tool.url : "";
   $("#tfStatus").value = tool?.kind === "http_check" ? (tool.expectStatus || "") : "";
   $("#tfJsonPath").value = tool?.kind === "http_check" ? (tool.jsonPath || "") : "";
@@ -630,10 +634,12 @@ function buildManifest() {
     const t = $("#tfTimeout").value.trim(); if (t) m.timeoutMs = Number(t);
     return m;
   }
-  if (kind === "db_query") {
+  if (kind === "db_query" || kind === "db_console") {
     const conn = { host: $("#tfDbHost").value.trim(), port: Number($("#tfDbPort").value.trim() || 0), user: $("#tfDbUser").value.trim(), password: $("#tfDbPass").value };
     const db = $("#tfDbName").value.trim(); if (db) conn.database = db;
-    return { ...base, engine: $("#tfEngine").value, conn, query: $("#tfQuery").value.trim() };
+    const m = { ...base, engine: $("#tfEngine").value, conn };
+    if (kind === "db_query") m.query = $("#tfQuery").value.trim();
+    return m;
   }
   if (kind === "http_check") {
     const m = { ...base, url: $("#tfUrl").value.trim() };

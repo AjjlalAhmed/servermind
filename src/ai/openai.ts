@@ -7,9 +7,10 @@
 
 import { getAI } from "../settings.ts";
 import { isMutatingCall } from "../tools/index.ts";
-import { customToolSpecs } from "../tools/custom.ts";
+import { customToolOpenAI } from "../tools/custom.ts";
 import { localAgent } from "../agent.ts";
-import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, isFleetTool, dispatchFleetTool } from "../fleet/tools.ts";
+import { RemoteAgent } from "../fleet/remote.ts";
+import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, isFleetTool, dispatchFleetTool, agentCustomToolDefs } from "../fleet/tools.ts";
 import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
 
 const MAX_TURNS = 10;
@@ -111,20 +112,20 @@ export async function runChat(
     return;
   }
 
-  // User-defined custom tools run on THIS box, so only offer them when the chat
-  // targets the local controller — not when managing a remote agent (v1 is
-  // single-box; the remote wouldn't have them). They take no model input
-  // (frozen), so empty params.
+  // Custom tools: when chatting the local controller, offer the controller's own
+  // tools; when managing a remote agent, offer THAT agent's advertised tools
+  // (which run on the agent — RemoteAgent.invoke routes the call there). Each is
+  // frozen except db_console, which takes a model-supplied `query`.
   const local = !opts.agent || opts.agent === localAgent;
   const customTools = local
-    ? customToolSpecs().map((s) => ({
-        type: "function",
-        function: { name: s.name, description: s.description, parameters: { type: "object", properties: {}, required: [] } },
-      }))
-    : [];
+    ? customToolOpenAI()
+    : opts.agent instanceof RemoteAgent ? agentCustomToolDefs(opts.agent.id) : [];
   const tools = [...TOOLS, ...customTools, ...(opts.fleet ? FLEET_TOOLS : [])];
+  const agentToolNote = !local && customTools.length
+    ? `\n\nThis server exposes custom tools: ${customTools.map((t) => t.function.name).join(", ")}. They run ON this server — use them to answer questions about its data, and pass a read-only SELECT in \`query\` for any db console tool.`
+    : "";
   const messages: any[] = [
-    { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") },
+    { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") + agentToolNote },
     ...history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
       .map((h) => ({ role: h.role, content: h.content })),

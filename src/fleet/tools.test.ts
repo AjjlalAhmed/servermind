@@ -3,7 +3,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { startFleetHub } from "./hub.ts";
-import { dispatchFleetTool, isFleetTool } from "./tools.ts";
+import { dispatchFleetTool, isFleetTool, agentCustomToolDefs } from "./tools.ts";
 import type { StatusSnapshot } from "../status.ts";
 
 const snap = (over: { disk?: number; mem?: number }) => ({
@@ -50,5 +50,23 @@ describe("fleet tools", () => {
     const r = await dispatchFleetTool("fleet_run", { server: "all", tool: "rm", input: {} });
     expect(r.isError).toBe(true);
     expect(r.content).toContain("must be one of");
+  });
+
+  test("agentCustomToolDefs builds OpenAI defs from an agent's advertised tools", () => {
+    const reg = startFleetHub(":memory:");
+    reg.register("a1", "web-1");
+    reg.setTools("a1", [
+      { name: "active_orders", description: "count active orders", takesQuery: false },
+      { name: "orders_db", description: "query the orders db", takesQuery: true },
+    ]);
+    const defs = agentCustomToolDefs("a1");
+    expect(defs.map((d) => d.function.name).sort()).toEqual(["active_orders", "orders_db"]);
+    const frozen = defs.find((d) => d.function.name === "active_orders")!;
+    expect(frozen.function.parameters.required).toEqual([]);
+    const console = defs.find((d) => d.function.name === "orders_db")!;
+    expect(console.function.parameters.required).toEqual(["query"]);
+    expect((console.function.parameters.properties as any).query.type).toBe("string");
+    // An agent with nothing advertised yields no defs.
+    expect(agentCustomToolDefs("missing")).toEqual([]);
   });
 });

@@ -45,6 +45,23 @@ export const FLEET_SYSTEM_PROMPT =
   "on a specific server by hostname (or \"all\"). The plain per-server tools act on the " +
   "controller's own box, so prefer fleet_run when the user asks about a managed server.";
 
+// OpenAI function defs for the custom tools a specific agent advertised. Used
+// when the operator "manages" that server: the AI gets its tools, and a call
+// routes to the agent (RemoteAgent.invoke → sendInvoke), which runs it locally.
+export function agentCustomToolDefs(agentId: string) {
+  const reg = fleetRegistry();
+  return (reg ? reg.getTools(agentId) : []).map((t) => ({
+    type: "function",
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.takesQuery
+        ? { type: "object", properties: { query: { type: "string", description: "A single read-only SQL statement (SELECT / SHOW / EXPLAIN), no semicolons" } }, required: ["query"] }
+        : { type: "object", properties: {}, required: [] },
+    },
+  }));
+}
+
 export function isFleetTool(name: string): boolean {
   const bare = name.replace(/^mcp__[^_]+__/, "");
   return bare === "fleet_list" || bare === "fleet_run";

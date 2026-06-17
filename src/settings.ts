@@ -76,11 +76,14 @@ const store: Store = {
   customTools: [],
 };
 
-// db_query connection passwords are the only secret inside a custom tool.
+// DB connection passwords (db_query + db_console) are the only secret inside a
+// custom tool.
+const hasDbConn = (t: CustomTool): t is Extract<CustomTool, { kind: "db_query" | "db_console" }> =>
+  t.kind === "db_query" || t.kind === "db_console";
 const encTool = (t: CustomTool): CustomTool =>
-  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: encryptSecret(t.conn.password) } } : t;
+  hasDbConn(t) ? { ...t, conn: { ...t.conn, password: encryptSecret(t.conn.password) } } : t;
 const decTool = (t: CustomTool): CustomTool =>
-  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: safeDecrypt(t.conn.password) } } : t;
+  hasDbConn(t) ? { ...t, conn: { ...t.conn, password: safeDecrypt(t.conn.password) } } : t;
 
 // ── persistence (atomic, encrypted secrets, chmod 600) ────────────────────────
 function ensureDir() { try { mkdirSync(DATA_DIR, { recursive: true }); } catch { /* ignore */ } }
@@ -148,12 +151,12 @@ export const emailEnabled = () => store.email.enabled && store.email.to !== "";
 // db_query passwords are masked for the API; new values come back in via the
 // unmask step in updateSettings (mask/empty = keep the stored secret).
 const maskTool = (t: CustomTool): CustomTool =>
-  t.kind === "db_query" ? { ...t, conn: { ...t.conn, password: t.conn.password ? MASK : "" } } : t;
+  hasDbConn(t) ? { ...t, conn: { ...t.conn, password: t.conn.password ? MASK : "" } } : t;
 function unmaskTool(t: any, current: CustomTool[]): any {
-  if (!t || t.kind !== "db_query" || !t.conn) return t;
+  if (!t || (t.kind !== "db_query" && t.kind !== "db_console") || !t.conn) return t;
   const pw = t.conn.password;
   if (pw !== MASK && pw !== "" && pw != null) return t; // a new password was provided
-  const prev = current.find((c) => c.name === t.name && c.kind === "db_query") as Extract<CustomTool, { kind: "db_query" }> | undefined;
+  const prev = current.find((c) => c.name === t.name && (c.kind === "db_query" || c.kind === "db_console")) as Extract<CustomTool, { kind: "db_query" | "db_console" }> | undefined;
   return { ...t, conn: { ...t.conn, password: prev?.conn.password ?? "" } };
 }
 

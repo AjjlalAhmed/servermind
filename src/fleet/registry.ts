@@ -6,6 +6,7 @@
 
 import { Database } from "bun:sqlite";
 import type { StatusSnapshot } from "../status.ts";
+import type { AdvertisedTool } from "./protocol.ts";
 
 const ONLINE_MS = 45_000; // an agent is "online" if seen within this window
 
@@ -21,6 +22,9 @@ export class FleetRegistry {
   private db: Database;
   private status = new Map<string, StatusSnapshot>();
   private lastSeen = new Map<string, number>();
+  // Custom tools each agent advertised at its last hello. In-memory only — the
+  // agent re-sends them on every reconnect, so there's nothing to persist.
+  private tools = new Map<string, AdvertisedTool[]>();
 
   constructor(path = ":memory:") {
     this.db = new Database(path, { create: true });
@@ -48,6 +52,14 @@ export class FleetRegistry {
     this.status.set(id, snapshot);
     this.lastSeen.set(id, now);
     this.db.run("UPDATE servers SET last_seen=? WHERE id=?", [now, id]);
+  }
+
+  // The custom tools an agent advertised on its last hello.
+  setTools(id: string, tools: AdvertisedTool[]): void {
+    this.tools.set(id, tools);
+  }
+  getTools(id: string): AdvertisedTool[] {
+    return this.tools.get(id) ?? [];
   }
 
   list(now = Date.now()): FleetServer[] {
@@ -99,6 +111,7 @@ export class FleetRegistry {
     this.db.run("DELETE FROM servers WHERE id=?", [id]);
     this.status.delete(id);
     this.lastSeen.delete(id);
+    this.tools.delete(id);
   }
 
   close(): void {

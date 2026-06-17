@@ -5,6 +5,17 @@
 import { z } from "zod";
 import type { StatusSnapshot } from "../status.ts";
 
+// A custom tool the agent OWNS and is willing to expose. The agent advertises
+// only this metadata — never the tool's definition (command/query/connection).
+// The controller routes calls by name; the agent re-validates and runs them.
+export const AdvertisedToolSchema = z.object({
+  name: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
+  description: z.string().max(400),
+  // db_console-style tools take a model-supplied `query`; everything else is frozen.
+  takesQuery: z.boolean().optional(),
+});
+export type AdvertisedTool = z.infer<typeof AdvertisedToolSchema>;
+
 export const HelloSchema = z.object({
   type: z.literal("hello"),
   token: z.string().max(512),
@@ -14,6 +25,8 @@ export const HelloSchema = z.object({
   agentId: z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/),
   hostname: z.string().min(1).max(255).regex(/^[A-Za-z0-9._-]+$/),
   version: z.string().max(32).optional(),
+  // The agent's own custom tools it's exposing to the controller (names only).
+  tools: z.array(AdvertisedToolSchema).max(50).optional(),
 });
 export type Hello = z.infer<typeof HelloSchema>;
 

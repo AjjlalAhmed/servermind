@@ -68,6 +68,31 @@ describe("validateCustomTools", () => {
   });
 });
 
+describe("db_console (AI writes the query)", () => {
+  const dbc = (over: object = {}) => ({ kind: "db_console", name: "askdb", description: "query the app db", engine: "mysql", conn: { host: "127.0.0.1", port: 3306, user: "ro", password: "" }, ...over });
+
+  test("validates with just a connection (no frozen query)", () => {
+    expect(validateCustomTools([dbc()]).ok).toBe(true);
+  });
+
+  test("postgres db_console still requires a database", () => {
+    expect(validateCustomTools([dbc({ engine: "postgres" })]).ok).toBe(false);
+  });
+
+  test("the model-supplied query is gated read-only at execution", async () => {
+    register([dbc()]);
+    // A write the model might try is refused before hitting the DB.
+    const r = await dispatchTool("askdb", { query: "DELETE FROM orders" }, { allowMutations: false });
+    expect(r.isError).toBe(true);
+    expect(r.content.toLowerCase()).toContain("read-only");
+  });
+
+  test("db_console is never mutating (no arm gate)", () => {
+    register([dbc()]);
+    expect(isMutatingCall("askdb", { query: "SELECT 1" })).toBe(false);
+  });
+});
+
 describe("execution", () => {
   test("a frozen command runs via exec and returns its output", async () => {
     register([cmd()]);

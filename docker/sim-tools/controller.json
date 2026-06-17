@@ -1,0 +1,44 @@
+[
+  {
+    "kind": "db_console",
+    "name": "orders_db",
+    "description": "Query the ORDERS database (customers, products, order status, totals, revenue). Read-only.",
+    "engine": "mysql",
+    "conn": { "host": "mysql", "port": 3306, "user": "ro", "password": "sim", "database": "appdb" }
+  },
+  {
+    "kind": "db_console",
+    "name": "hr_db",
+    "description": "Query the HR / EMPLOYEES database (people, roles, departments, salaries). Read-only.",
+    "engine": "mysql",
+    "conn": { "host": "mysql", "port": 3306, "user": "ro", "password": "sim", "database": "hr" }
+  },
+  {
+    "kind": "db_console",
+    "name": "analytics_db",
+    "description": "Query the ANALYTICS database on Postgres (signups, events, plans, purchases). Read-only.",
+    "engine": "postgres",
+    "conn": { "host": "postgres", "port": 5432, "user": "ro", "password": "sim", "database": "analytics" }
+  },
+  {
+    "kind": "db_query",
+    "name": "active_orders",
+    "description": "How many orders are currently active",
+    "engine": "mysql",
+    "conn": { "host": "mysql", "port": 3306, "user": "ro", "password": "sim", "database": "appdb" },
+    "query": "SELECT COUNT(*) AS active_orders FROM orders WHERE status='active'"
+  },
+  {
+    "kind": "command",
+    "name": "server_uptime",
+    "description": "Show how long this server has been up",
+    "argv": ["uptime"]
+  },
+  {
+    "kind": "http_check",
+    "name": "self_health",
+    "description": "Check the controller's own /health endpoint is up",
+    "url": "http://127.0.0.1:5500/health",
+    "expectStatus": 200
+  }
+]

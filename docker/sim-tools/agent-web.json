@@ -1,0 +1,17 @@
+[
+  {
+    "kind": "db_console",
+    "name": "orders_db",
+    "description": "Query the ORDERS database on THIS server (web). Read-only.",
+    "engine": "mysql",
+    "conn": { "host": "mysql", "port": 3306, "user": "ro", "password": "sim", "database": "appdb" }
+  },
+  {
+    "kind": "db_query",
+    "name": "active_orders",
+    "description": "How many orders are currently active on this server",
+    "engine": "mysql",
+    "conn": { "host": "mysql", "port": 3306, "user": "ro", "password": "sim", "database": "appdb" },
+    "query": "SELECT COUNT(*) AS active_orders FROM orders WHERE status='active'"
+  }
+]

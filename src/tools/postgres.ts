@@ -43,11 +43,21 @@ function baseArgs(conn: PostgresConn): string[] {
   return ["psql", "-h", conn.host, "-p", String(conn.port), "-U", conn.user, "-d", conn.database, "-X", "-w", "-t", "-A", "--csv"];
 }
 
+// Read-only enforced by the engine, not just the regex: default every
+// transaction in this psql session to READ ONLY, so Postgres itself rejects any
+// write — including a data-modifying CTE (`WITH x AS (DELETE …) SELECT …`) that
+// the text-level gate can't reliably catch. Legitimate reads (SELECT, read-only
+// CTEs, EXPLAIN) are unaffected — this looks at what a statement DOES, not its
+// text, so there are no false positives. The validateReadonlyPg regex stays as a
+// friendly first check AND to block file reads (e.g. pg_read_file), which a
+// read-only transaction does not prevent.
+export const PG_READONLY_OPT = "-c default_transaction_read_only=on";
+
 export async function postgresQueryOn(conn: PostgresConn, query: string): Promise<PostgresResult> {
   const bad = validateReadonlyPg(query);
   if (bad) return { ok: false, output: "", error: bad };
   const r = await exec([...baseArgs(conn), "-c", query], {
-    env: { PGPASSWORD: conn.password, PGCONNECT_TIMEOUT: "8" },
+    env: { PGPASSWORD: conn.password, PGCONNECT_TIMEOUT: "8", PGOPTIONS: PG_READONLY_OPT },
     timeoutMs: 12_000,
   });
   return {

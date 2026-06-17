@@ -59,6 +59,9 @@ export const fleetWebSocket = {
       ws.data.agentId = id;
       conns.set(id, ws);
       registry?.register(id, msg.data.hostname);
+      // Record the custom tools this agent exposes (names only) so the AI can be
+      // offered them when an operator manages this server.
+      registry?.setTools(id, msg.data.tools ?? []);
       ws.send(JSON.stringify({ type: "welcome" }));
       return;
     }

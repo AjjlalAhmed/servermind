@@ -4,6 +4,7 @@
 
 import { getStatusSnapshot } from "../status.ts";
 import { localAgent } from "../agent.ts";
+import { advertisedCustomTools } from "../tools/custom.ts";
 import { helloFrame, statusFrame, resultFrame, parseControllerMessage } from "./protocol.ts";
 
 export interface AgentOptions {
@@ -38,7 +39,12 @@ export function startAgentConnector(opts: AgentOptions): { stop: () => void } {
 
     ws.addEventListener("open", () => {
       log(`connected to ${opts.controllerUrl}`);
-      ws!.send(helloFrame({ token: opts.token, agentId: opts.agentId, hostname: opts.hostname, version: opts.version }));
+      // Advertise this box's own custom tools (names only) so the controller can
+      // offer them to the AI when an operator manages this server. The agent
+      // still re-validates and runs them locally.
+      const tools = advertisedCustomTools();
+      ws!.send(helloFrame({ token: opts.token, agentId: opts.agentId, hostname: opts.hostname, version: opts.version, tools }));
+      if (tools.length) log(`advertised ${tools.length} custom tool(s): ${tools.map((t) => t.name).join(", ")}`);
       void pushStatus();
       timer = setInterval(() => void pushStatus(), intervalMs);
     });

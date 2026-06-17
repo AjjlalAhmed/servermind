@@ -135,7 +135,7 @@ export async function dispatchTool(
         // User-defined custom tools (db_query / http_check / read_file /
         // command). The arm gate above already ran via isMutatingCall, so a
         // mutating custom tool is refused here when disarmed.
-        if (isCustomTool(name)) return await dispatchCustomTool(name);
+        if (isCustomTool(name)) return await dispatchCustomTool(name, input);
         return err(`unknown tool: ${name}`);
       }
     }

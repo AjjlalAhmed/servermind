@@ -54,6 +54,19 @@ const dbQuery = z.object({
   mutating: z.literal(false).default(false),
 });
 
+// Like db_query, but the AI composes a single read-only SELECT at call time
+// instead of the operator freezing it. Flexible ("ask the DB anything") at the
+// cost of letting the model choose the query — so the read-only gate runs on
+// whatever it sends, and the real boundary is the DB user's grants (point it at
+// a SELECT-only role). Never mutates, never touches files. No frozen query here.
+const dbConsole = z.object({
+  kind: z.literal("db_console"),
+  name, description,
+  engine: z.enum(["mysql", "postgres"]),
+  conn,
+  mutating: z.literal(false).default(false),
+});
+
 const httpCheck = z.object({
   kind: z.literal("http_check"),
   name, description,
@@ -80,7 +93,7 @@ const command = z.object({
   timeoutMs: z.number().int().min(1000).max(60_000).optional(),
 });
 
-export const CustomToolSchema = z.discriminatedUnion("kind", [dbQuery, httpCheck, readFile, command]);
+export const CustomToolSchema = z.discriminatedUnion("kind", [dbQuery, dbConsole, httpCheck, readFile, command]);
 export const CustomToolsSchema = z.array(CustomToolSchema).max(MAX_TOOLS);
 export type CustomTool = z.infer<typeof CustomToolSchema>;
 
@@ -115,6 +128,11 @@ function validateOne(t: CustomTool): string | null {
     case "db_query":
       if (t.engine === "postgres" && !t.conn.database) return "postgres requires conn.database";
       return t.engine === "mysql" ? validateReadonlySql(t.query) : validateReadonlyPg(t.query);
+    case "db_console":
+      // The query is supplied per-call and gated at execution; only the
+      // connection is fixed here.
+      if (t.engine === "postgres" && !t.conn.database) return "postgres requires conn.database";
+      return null;
     case "http_check":
       try {
         if (!/^https?:$/.test(new URL(t.url).protocol)) return "only http/https URLs are allowed";
@@ -127,39 +145,84 @@ function validateOne(t: CustomTool): string | null {
 }
 
 // ── exposure to the AI backends ───────────────────────────────────────────────
-// Frozen tools take no model input, so the schema is empty. The description is
-// what the model sees; we tag read-only vs mutating so it knows the arm rule.
+// What the model sees as the tool description; we tag read-only vs mutating so
+// it knows the arm rule, and tell db_console to supply a single SELECT.
+function describe(t: CustomTool): string {
+  if (t.kind === "db_console") return `${t.description} (custom db_console — you provide one read-only ${t.engine} SELECT/SHOW/EXPLAIN; writes & multi-statements are blocked)`;
+  if (t.kind === "command" && t.mutating) return `${t.description} (custom command, MUTATING — requires arm)`;
+  return `${t.description} (custom ${t.kind}, read-only)`;
+}
+
+// The query parameter the AI fills for a db_console tool. Every other kind is
+// frozen and takes no model input.
+const QUERY_DESC = "A single read-only SQL statement (SELECT / SHOW / EXPLAIN), no semicolons or comments";
+
+// MCP form: ZodRawShape per tool. db_console accepts a `query`; the rest empty.
 export function customToolSpecs(): ToolSpec[] {
+  return TOOLS.map((t) => {
+    const schema: z.ZodRawShape = t.kind === "db_console" ? { query: z.string().describe(QUERY_DESC) } : {};
+    return { name: t.name, description: describe(t), schema };
+  });
+}
+
+// OpenAI function-calling form: same set, JSON-Schema params.
+export function customToolOpenAI() {
   return TOOLS.map((t) => ({
-    name: t.name,
-    description: `${t.description} (custom ${t.kind}${t.kind === "command" && t.mutating ? ", MUTATING — requires arm" : ", read-only"})`,
-    schema: {},
+    type: "function",
+    function: {
+      name: t.name,
+      description: describe(t),
+      parameters: t.kind === "db_console"
+        ? { type: "object", properties: { query: { type: "string", description: QUERY_DESC } }, required: ["query"] }
+        : { type: "object", properties: {}, required: [] },
+    },
   }));
 }
 
 export function isCustomTool(n: string): boolean { return find(n) !== undefined; }
 export function customToolMutating(n: string): boolean { return !!find(n)?.mutating; }
 
+// Lightweight metadata an agent advertises to the controller — names + the
+// model-facing description only, never the definition (command/query/conn).
+// `takesQuery` flags a db_console tool whose query the controller's AI fills.
+export function advertisedCustomTools(): { name: string; description: string; takesQuery: boolean }[] {
+  return TOOLS.map((t) => ({ name: t.name, description: describe(t), takesQuery: t.kind === "db_console" }));
+}
+
 // ── execution ─────────────────────────────────────────────────────────────────
-// Arm gating for mutating tools is enforced upstream in dispatchTool() (via
-// isMutatingCall), so we don't re-check it here.
-export async function dispatchCustomTool(n: string): Promise<DispatchResult> {
+// `input` carries any model-supplied arguments (only db_console uses it — the
+// `query`). Arm gating for mutating tools is enforced upstream in dispatchTool()
+// (via isMutatingCall), so we don't re-check it here.
+export async function dispatchCustomTool(n: string, input?: any): Promise<DispatchResult> {
   const t = find(n);
   if (!t) return { content: `unknown tool: ${n}`, isError: true };
-  return runCustomTool(t);
+  return runCustomTool(t, input);
 }
 
 // Run a specific manifest (used by dispatch AND by the dashboard "Test" button,
 // which runs an unsaved manifest). Re-validates first as defence-in-depth.
-export async function runCustomTool(t: CustomTool): Promise<DispatchResult> {
+export async function runCustomTool(t: CustomTool, input?: any): Promise<DispatchResult> {
   const bad = validateOne(t);
   if (bad) return { content: `REJECTED: ${bad}`, isError: true };
   switch (t.kind) {
     case "db_query": return runDbQuery(t);
+    case "db_console": return runDbConsole(t, input);
     case "http_check": return runHttpCheck(t);
     case "read_file": return runReadFile(t);
     case "command": return runCommand(t);
   }
+}
+
+async function runDbConsole(t: Extract<CustomTool, { kind: "db_console" }>, input?: any): Promise<DispatchResult> {
+  // The AI supplies the query; the read-only gate inside the runner validates it.
+  // With no query (e.g. the dashboard "Test" button) we run SELECT 1 as a
+  // connectivity probe.
+  const query = input && typeof input.query === "string" && input.query.trim() ? input.query.trim() : "SELECT 1";
+  const r = t.engine === "mysql"
+    ? await mysqlQueryOn(t.conn, query)
+    : await postgresQueryOn({ ...t.conn, database: t.conn.database ?? "" }, query);
+  if (r.ok) return { content: r.output || "(no rows)", isError: false };
+  return { content: `${r.error ?? "query failed"}${r.output ? `: ${r.output}` : ""}`, isError: true };
 }
 
 async function runDbQuery(t: Extract<CustomTool, { kind: "db_query" }>): Promise<DispatchResult> {

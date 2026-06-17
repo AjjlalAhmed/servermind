@@ -7,9 +7,12 @@
 FROM oven/bun:1.3.4
 
 # procps gives `free`, `uptime`, `ps` so status snapshots are complete (the slim
-# base image omits them). Mainly for the local fleet sim — real agents run
-# natively on hosts that already have these.
-RUN apt-get update && apt-get install -y --no-install-recommends procps && rm -rf /var/lib/apt/lists/*
+# base image omits them). The DB clients (`mysql`, `psql`) let the MySQL/Postgres
+# health probes and user-defined db_query custom tools actually run. Mainly for
+# the local fleet sim — real hosts already have whatever clients they need.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      procps default-mysql-client postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

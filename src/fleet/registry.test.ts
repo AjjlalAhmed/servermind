@@ -41,6 +41,18 @@ describe("FleetRegistry", () => {
     expect(r.list()).toEqual([]);
     r.close();
   });
+
+  test("setTools / getTools store an agent's advertised tools; remove clears them", () => {
+    const r = new FleetRegistry(":memory:");
+    r.register("a1", "web-1");
+    expect(r.getTools("a1")).toEqual([]);
+    r.setTools("a1", [{ name: "orders_db", description: "the orders db", takesQuery: true }]);
+    expect(r.getTools("a1")).toHaveLength(1);
+    expect(r.getTools("a1")[0]!.name).toBe("orders_db");
+    r.remove("a1");
+    expect(r.getTools("a1")).toEqual([]);
+    r.close();
+  });
 });
 
 describe("FleetRegistry — WireGuard mesh", () => {
