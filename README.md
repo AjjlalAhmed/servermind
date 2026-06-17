@@ -27,6 +27,10 @@ curl -fsSL https://servermind.dev/install.sh | bash
   disk/memory cross a threshold, a monitored service drops, or a TLS cert nears
   expiry, plus a daily health digest. Sends via SMTP or Resend; toggle it from
   the dashboard.
+- **Custom tools** — extend the assistant from the dashboard: a frozen shell
+  command, a read-only database query, a "DB console" the AI writes SELECTs
+  against, an HTTP health check, or a log file to read. You define them; the AI
+  can only trigger them. See [Custom tools](#custom-tools).
 - **Bring your own AI** — the free **Gemini** tier, a **Claude Code**
   subscription, or any **OpenAI-compatible** API (Groq, OpenRouter, local
   Ollama). No lock-in.
@@ -222,6 +226,63 @@ tunnel, and connects over the mesh. Drop `--mesh` on both sides to run the plain
 > `test/mesh/run.sh`, or `test/mesh/fresh-vps.sh` for the full two-box flow.
 > (Run the *controller* in Docker if you like; **agents are always native** —
 > a containerized agent can't see the host's systemd/PM2/disk.)
+
+## Custom tools
+
+The built-in tools cover the common cases. **Custom tools** let you teach the
+assistant about *your* stack — your database, your health endpoint, your one
+diagnostic command — without writing code or weakening the safety model. You
+add, edit, test and remove them from the dashboard's **Tools** tab (operator
+only, behind your login).
+
+The core idea: **you define and freeze the tool; the AI can only trigger it.**
+The model never supplies a command, path, or URL — it just decides *when* to
+call what you already approved. (The one exception is the DB console, below,
+where the AI writes a *read-only* query that's validated before it runs.)
+
+### The five kinds
+
+| Kind | What it does | The AI supplies |
+|------|--------------|-----------------|
+| **Pinned command** | Runs one **exact, frozen** `argv` (e.g. `redis-cli INFO memory`) with **no shell** — metacharacters are inert. Read-only by default; tick *"changes things"* to make it a mutation gated by the **arm** switch. | nothing |
+| **Read-only DB query** | A **frozen** SQL query you write (MySQL/MariaDB or PostgreSQL). | nothing |
+| **DB console** | The AI writes a **read-only** `SELECT`/`SHOW`/`EXPLAIN` at call time against a database you configured. | the query |
+| **HTTP health check** | `GET` a **frozen** URL; optionally assert a status code or a JSON field. | nothing |
+| **Read a file** | Tails a **frozen** path, confined to the same safe roots as `read_log` (`/var/log`, PM2 logs…). | nothing |
+
+### How the safety holds
+
+- **Frozen by the operator.** The argv / query / URL / path live in the tool's
+  definition; the AI can't change them. A poisoned prompt can at most call a
+  tool you already vetted.
+- **Read-only databases — two layers.** Every DB query (frozen *and* console)
+  passes a read-only gate (only `SELECT`/`SHOW`/`EXPLAIN`-class statements, a
+  single statement, no `INTO OUTFILE`/`LOAD_FILE`/`COPY … PROGRAM`/`pg_read_file`
+  vectors). For **PostgreSQL** the session also runs `default_transaction_read_only=on`,
+  so the engine itself rejects any write — including a data-modifying CTE the
+  text gate can't catch. The real boundary, though, is the **database user's
+  grants**: point DB tools at a **least-privilege, `SELECT`-only role** scoped to
+  just the data you want exposed.
+- **Mutations stay gated.** A pinned command marked mutating goes through the
+  same server-side **arm** switch (and single-use consumption) as a service
+  restart — disarmed by default.
+- **Secrets encrypted.** A DB tool's connection password is AES-256-GCM encrypted
+  at rest and masked in the API, like every other secret.
+- **Privacy.** A DB console's results are sent to your configured AI provider so
+  it can answer — use a local Ollama backend for zero egress.
+
+> **Note:** a DB console lets the AI read anything its DB user can read. That's
+> powerful and convenient — keep it safe by giving the tool a read-only user
+> scoped to only the database/tables it should see.
+
+### On a fleet
+
+Custom tools are **agent-owned**: each server defines its own tools in its local
+settings and advertises only their *names* to the controller. When you **Manage**
+a server in the Fleet tab, the AI is offered that box's tools and the call runs
+**on that box**, re-validated locally. The controller can trigger a server's
+tools but can never define or push one — so it still can't make a box do
+anything its own config forbids.
 
 ## License
 

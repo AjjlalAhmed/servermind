@@ -134,13 +134,17 @@ fi
 cd "$DIR"
 
 # Trim files that only matter to the project, not to running ServerMind on this
-# box: the marketing landing site, the CI config, and the container test
-# scenarios. The running app serves src/public, never landing/ or test/, so these
-# are just dead weight here. (guides/ is gitignored and never cloned.) NOTE: keep
-# scripts/ — --mesh calls scripts/setup-mesh-controller.sh. Runs every time — a
-# later `git reset --hard` during update restores them, and this removes them
-# again. Idempotent.
-rm -rf landing .github test 2>/dev/null || true
+# box: the marketing landing site, the CI config, and the local fleet SIMULATION
+# (the docker-compose sim, its seed SQL / sim-tools manifests, the sim-agent
+# image + entry script, and the sim tool-seeder). A native install runs from
+# .env under PM2 and never touches any of these, so they're just dead weight —
+# and the sim files carry dummy creds we don't want sitting on a prod box. The
+# running app serves src/public only. (guides/ is gitignored and never cloned.)
+# NOTE: keep scripts/ otherwise — --mesh calls scripts/setup-mesh-controller.sh.
+# Runs every time — a later `git reset --hard` during update restores these and
+# this removes them again. Idempotent.
+rm -rf landing .github test docker docker-compose.fleet.yml Dockerfile.agent-sim \
+  scripts/sim-seed-tools.ts 2>/dev/null || true
 
 # ── 5. dependencies ────────────────────────────────────────────────────────────
 step "Installing dependencies"

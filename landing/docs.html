@@ -131,6 +131,7 @@
       <a href="#after">After install</a>
       <a href="#email">Email reports & alerts</a>
       <a href="#fleet">Multiple servers</a>
+      <a href="#custom-tools">Custom tools</a>
       <a href="#uninstall">Uninstall</a>
       <a href="#security">Security model</a>
       <a href="#troubleshooting">Troubleshooting</a>
@@ -330,9 +331,40 @@ servermind.example.com {
         <div class="callout warn"><span class="ct">Reaching the controller</span>The controller needs a reachable address; agents do not. With <code>--mesh</code> it binds so agents can connect and opens UDP&nbsp;51820 on the host firewall — but a cloud provider's <strong>security group / network ACL is separate</strong>, so allow UDP&nbsp;51820 there too. The shared join token is used only for the first bootstrap hop; the per-agent WireGuard keys are individually revocable.</div>
       </section>
 
+      <!-- Custom tools -->
+      <section id="custom-tools" class="reveal">
+        <h2><span class="h2-no">08</span> Custom tools</h2>
+        <p class="lead">The built-in tools cover the common cases. <strong>Custom tools</strong> let you teach the assistant about <em>your</em> stack — your database, your health endpoint, your one diagnostic command — without writing code or weakening the safety model. Add, edit, test and remove them from the dashboard's <strong>Tools</strong> tab (operator only, behind your login).</p>
+        <p>The core idea: <strong>you define and freeze the tool; the AI can only trigger it.</strong> The model never supplies a command, path, or URL — it just decides <em>when</em> to call what you already approved. The one exception is the DB console, where the AI writes a <em>read-only</em> query that's validated before it runs.</p>
+
+        <h3>The five kinds</h3>
+        <ul>
+          <li><strong>Pinned command</strong> — one <strong>exact, frozen</strong> command (e.g. <code>redis-cli INFO memory</code>), run with <strong>no shell</strong> so metacharacters mean nothing. Read-only by default; tick <em>"changes things"</em> to make it a mutation gated by the arm switch.</li>
+          <li><strong>Read-only DB query</strong> — a <strong>frozen</strong> SQL query you write, for MySQL/MariaDB or PostgreSQL.</li>
+          <li><strong>DB console</strong> — the AI writes a <strong>read-only</strong> <code>SELECT</code> at the moment you ask, against a database you configured. Ask "how many active orders?" and it composes the query, runs it, and answers.</li>
+          <li><strong>HTTP health check</strong> — <code>GET</code> a <strong>frozen</strong> URL; optionally assert a status code or a JSON field.</li>
+          <li><strong>Read a file</strong> — tail a <strong>frozen</strong> path, confined to the same safe roots as the log reader (<code>/var/log</code>, PM2 logs…).</li>
+        </ul>
+
+        <h3>How the safety holds</h3>
+        <p>Custom tools never loosen the guardrails — they're enforced the same way the built-ins are:</p>
+        <ul>
+          <li><strong>Frozen by you.</strong> The command/query/URL/path lives in the tool's definition; the AI can't change it. A poisoned prompt can at most call a tool you already vetted.</li>
+          <li><strong>Read-only databases, two layers.</strong> Every DB query (frozen and console) passes a read-only gate — only <code>SELECT</code>/<code>SHOW</code>/<code>EXPLAIN</code>-class statements, a single statement, and no file/exec vectors (<code>INTO OUTFILE</code>, <code>LOAD_FILE</code>, <code>COPY … PROGRAM</code>, <code>pg_read_file</code>…). For PostgreSQL the session also runs read-only, so the engine itself rejects any write — even a data-modifying CTE the text check can't catch.</li>
+          <li><strong>Mutations stay gated.</strong> A pinned command marked "changes things" goes through the same server-side arm switch as a service restart — off by default.</li>
+          <li><strong>Secrets encrypted.</strong> A DB tool's password is encrypted at rest (AES-256-GCM) and masked in the dashboard.</li>
+        </ul>
+
+        <div class="callout warn"><span class="ct">The real DB boundary is your database user</span>A DB console lets the AI read anything its database user can read. That's the point — and the safe way to use it is to give the tool a <strong>read-only user scoped to just the data you want exposed</strong>, not an admin login. The read-only gate is the app-layer safety net on top of that.</div>
+        <div class="callout note"><span class="ct">Privacy</span>A DB console's results are sent to your configured AI provider so it can answer in plain English. Use a local <strong>Ollama</strong> backend if you want zero data egress.</div>
+
+        <h3>On a fleet</h3>
+        <p>Custom tools are <strong>agent-owned</strong>: each server defines its own tools and advertises only their <em>names</em> to the controller. When you <strong>Manage</strong> a server in the Fleet tab, the AI is offered that box's tools and the call runs <strong>on that box</strong>, re-validated locally. The controller can trigger a server's tools but can never define or push one — so it still can't make a box do anything its own config forbids.</p>
+      </section>
+
       <!-- Uninstall -->
       <section id="uninstall" class="reveal">
-        <h2><span class="h2-no">08</span> Uninstall</h2>
+        <h2><span class="h2-no">09</span> Uninstall</h2>
         <p class="lead">One command removes ServerMind cleanly. It won't touch Bun, PM2, or git — you probably use those elsewhere.</p>
         <div class="codeblock">
           <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/uninstall.sh | bash</code></pre>
@@ -351,7 +383,7 @@ servermind.example.com {
 
       <!-- Security -->
       <section id="security" class="reveal">
-        <h2><span class="h2-no">09</span> Security model</h2>
+        <h2><span class="h2-no">10</span> Security model</h2>
         <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
@@ -367,7 +399,7 @@ servermind.example.com {
 
       <!-- Troubleshooting -->
       <section id="troubleshooting" class="reveal">
-        <h2><span class="h2-no">10</span> Troubleshooting</h2>
+        <h2><span class="h2-no">11</span> Troubleshooting</h2>
 
         <h3>I can't open the dashboard</h3>
         <p>It's bound to localhost by design. From your laptop, open an SSH tunnel (<a href="#access">above</a>) and visit <code>http://localhost:5500</code> — don't expect to hit the server's public IP directly.</p>

@@ -102,7 +102,7 @@ gRPC stream). Message types:
 
 | Direction | Message | Purpose |
 |-----------|---------|---------|
-| agent → controller | `hello` (token, hostname, version) | enroll / authenticate |
+| agent → controller | `hello` (token, hostname, version, **tools**) | enroll / authenticate; advertise this box's custom tools (names + descriptions only) |
 | agent → controller | `status` (snapshot every ~15s) | powers the fleet dashboard + alerts |
 | controller → agent | `invoke` (tool name, input, request id) | run a vetted tool on that box |
 | agent → controller | `result` (request id, output, isError) | tool result, streamed |
@@ -111,7 +111,11 @@ gRPC stream). Message types:
 
 The agent executes `invoke` by calling its **local `dispatchTool`** — i.e. exactly
 the same allowlist + arm gate as standalone. The controller can only *ask*; it
-never sends shell.
+never sends shell. The `tools` advertised in `hello` carry only **metadata**
+(name, description, whether it takes a query) — never the tool's definition
+(command/query/connection). The controller offers them to the AI when an operator
+manages that box and routes calls by name; the agent owns, re-validates, and
+executes them. See §10.
 
 ---
 
@@ -193,7 +197,48 @@ Agents remain near-stateless (token + local config only).
 
 ---
 
-## 10. Build plan (phased)
+## 10. Custom tools
+
+Operator-defined tools extend the assistant beyond the built-in allowlist
+**without** adding a shell. They're declarative **manifests** (data, not code),
+created/edited/tested from the dashboard **Tools** tab (operator-only, behind
+auth) and persisted in `data/settings.json` (db passwords AES-256-GCM encrypted).
+Code: `src/tools/custom.ts` (schema, validation, execution), with the DB gates in
+`src/tools/mysql.ts` / `src/tools/postgres.ts`.
+
+**Kinds** — `command` (one frozen `argv`, run via `Bun.spawn` with no shell;
+read-only by default, optionally a mutation gated by the arm switch), `db_query`
+(a frozen read-only SQL statement), `db_console` (the AI writes a read-only
+`SELECT` at call time), `http_check` (GET a frozen URL + optional assertion),
+`read_file` (a frozen path under the `read_log` safe roots).
+
+**The invariant: the operator freezes the tool; the AI only triggers it.** Every
+kind except `db_console` takes *no* model input. For `db_console` the AI supplies
+only a query, which is gated before execution.
+
+**Defense in depth for DB tools** (validated at registration *and* execution):
+1. **Read-only statement gate** — only `SELECT`/`SHOW`/`EXPLAIN`-class, a single
+   statement, no `INTO OUTFILE`/`LOAD_FILE`/`COPY … PROGRAM`/`pg_read_file`/
+   `lo_import`/`dblink` vectors.
+2. **Engine-enforced read-only** — Postgres sessions run with
+   `default_transaction_read_only=on`, so the engine rejects any write
+   (including a data-modifying CTE the text gate can't catch); MySQL has no
+   data-modifying CTEs.
+3. **Least-privilege role** — the real boundary is the DB user's grants. Point
+   DB tools at a `SELECT`-only role scoped to just the exposed data.
+
+**On a fleet — agent-owned, not controller-pushed.** Each agent defines its own
+tools locally and advertises only their names/descriptions in `hello` (§5). When
+an operator manages that server, the controller offers those tools to the AI and
+routes calls to the agent (`RemoteAgent.invoke` → `sendInvoke`); the agent
+**re-validates and runs them locally** with its own gates + arm switch. The
+controller can trigger an agent's tools but can never define or push one — a
+pushed `command` would be the controller making a box run new code, breaking
+invariant #1. Defining an agent's tools is therefore done on the agent box.
+
+---
+
+## 11. Build plan (phased)
 
 Each phase ships value on its own and is independently testable.
 
@@ -227,7 +272,7 @@ mTLS / mesh transport option, full audit log + retention, fleet-wide chat
 
 ---
 
-## 11. Open decisions
+## 12. Open decisions
 
 - **Transport:** raw `wss` + tokens (less infra) vs. require Tailscale/WireGuard
   underneath (stronger, but a dependency). Leaning: `wss` + tokens, mesh optional.
@@ -238,10 +283,13 @@ mTLS / mesh transport option, full audit log + retention, fleet-wide chat
 
 ---
 
-## 12. Invariants (must never change)
+## 13. Invariants (must never change)
 
 1. The **allowlist + arm switch are enforced on each agent** — the controller can
    never bypass them or get a shell.
 2. **Agents dial outbound** — no inbound ports on managed servers.
 3. **Standalone mode stays the zero-config default** and is never broken by fleet
    features.
+4. **Custom tools are agent-owned** — a box only ever runs tools defined in its
+   own config; the controller advertises and triggers by name but never defines
+   or pushes a tool to an agent.
