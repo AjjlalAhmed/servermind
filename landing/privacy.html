@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<!--
+  NOTE FOR THE MAINTAINER: this is a practical, accurate starting policy for an
+  open-source, self-hosted tool plus a marketing site that uses Microsoft Clarity.
+  Before relying on it, review and fill in: a contact email (currently points to
+  GitHub), your legal entity/name, and your governing-law jurisdiction. It is not
+  legal advice.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Microsoft Clarity (analytics) -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "x6od5uwr96");
+</script>
+
+<title>Privacy Policy — ServerMind</title>
+<meta name="description" content="ServerMind privacy policy: the self-hosted app collects no telemetry and sends data only to the AI provider you choose; the servermind.dev site uses privacy-friendly analytics." />
+<meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="ServerMind" />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://servermind.dev/privacy.html" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Privacy Policy — ServerMind" />
+<meta property="og:description" content="The self-hosted app collects no telemetry; the website uses privacy-friendly analytics." />
+<meta property="og:url" content="https://servermind.dev/privacy.html" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- scroll progress -->
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<!-- ─── nav ─── -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="compare.html">Compare</a>
+      <a href="index.html#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="docs.html#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="doc-hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container">
+      <span class="doc-eyebrow">Legal</span>
+      <h1>Privacy Policy</h1>
+      <p>ServerMind is open-source software you run on your own servers. This policy explains what the <strong>self-hosted app</strong> does (and doesn't) do with your data, and what the <strong>servermind.dev website</strong> collects.</p>
+      <p style="opacity:.7;font-size:.9rem">Last updated: June 18, 2026</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <article class="prose">
+
+      <h2>The short version</h2>
+      <ul>
+        <li>The <strong>self-hosted app collects no telemetry</strong> — it has no cloud backend and never phones home. We (the ServerMind project) never receive your servers' data, credentials, logs, or usage.</li>
+        <li>The only data that leaves your server is what <strong>you configure</strong>: your chat prompts and the command output needed to answer them go to the <strong>AI provider you chose</strong>, under your own account. Use a local model (Ollama) for zero data egress.</li>
+        <li>This <strong>website</strong> uses privacy-friendly, aggregate analytics (Microsoft Clarity) to improve the docs and landing pages. No accounts, no marketing emails, no selling of data.</li>
+      </ul>
+
+      <h2>The self-hosted application</h2>
+      <p>ServerMind runs entirely on infrastructure you control. It is not a service we operate.</p>
+      <ul>
+        <li><strong>No telemetry, no analytics, no "call home."</strong> The app does not transmit usage, crash, or diagnostic data to us or any third party we control.</li>
+        <li><strong>Your secrets stay local.</strong> Configuration and secrets (auth hashes, TOTP secret, AI keys, DB passwords) live in local files on your server (restricted file permissions; secret fields encrypted at rest). They are never sent to us.</li>
+        <li><strong>Your AI provider.</strong> To answer a question, ServerMind sends your prompt and the relevant command/query output to the AI backend <em>you</em> configured (e.g. Google Gemini, Anthropic Claude, an OpenAI-compatible API, or a local Ollama model). That data is processed under your own account and that provider's privacy terms. Choosing a local Ollama backend keeps everything on your machine.</li>
+        <li><strong>No database, no profiles.</strong> Sessions are kept in memory; there is no central user database operated by us.</li>
+      </ul>
+
+      <h2>The servermind.dev website</h2>
+      <p>The marketing and documentation pages at servermind.dev are a static site. To understand which content is useful and to fix problems, they use:</p>
+      <ul>
+        <li><strong>Microsoft Clarity</strong> — aggregate, privacy-friendly product analytics (page views, clicks, scroll, and heatmaps/session insights). Clarity may set cookies or use local storage and processes data per Microsoft's privacy statement. We use it only to improve the site, not to identify you. See Microsoft's <a href="https://privacy.microsoft.com/privacystatement" target="_blank" rel="noopener">privacy statement</a>.</li>
+        <li><strong>A CDN (jsDelivr)</strong> serves web fonts. As with any asset request, the CDN receives standard request metadata (such as your IP address) to deliver the files.</li>
+      </ul>
+      <p>The website itself does not require an account, does not ask for personal information, and does not send marketing email. Installer and uninstaller scripts are served as plain files; running them does not register you anywhere.</p>
+
+      <h2>Cookies &amp; local storage</h2>
+      <p>The website uses cookies/local storage only via Microsoft Clarity (analytics). The self-hosted app uses a first-party session cookie for <em>your</em> login — that cookie lives between your browser and <em>your</em> server, and we never see it.</p>
+
+      <h2>Data we hold</h2>
+      <p>Because there is no account system and no app backend, we do not hold personal data about users of the software. For the website, we hold only the aggregate analytics described above, retained by Microsoft Clarity under its retention terms.</p>
+
+      <h2>Children</h2>
+      <p>ServerMind is a developer tool not directed to children and is not intended for use by anyone under 13.</p>
+
+      <h2>Changes</h2>
+      <p>We may update this policy as the project evolves; material changes will be reflected by the "Last updated" date above.</p>
+
+      <h2>Contact</h2>
+      <p>Questions or privacy requests: open an issue at <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">github.com/AjjlalAhmed/servermind</a>.</p>
+
+      <p style="margin-top:2rem"><a href="terms.html">Terms of Use →</a></p>
+    </article>
+  </div>
+</main>
+
+<!-- ─── footer ─── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="compare.html">Compare</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>

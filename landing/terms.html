@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+  NOTE FOR THE MAINTAINER: practical starting Terms for an MIT-licensed, self-hosted
+  tool + its marketing site. Review and fill in before relying on it: a contact
+  email (currently GitHub), your legal entity/name, and a governing-law jurisdiction
+  (the "Governing law" section is left general on purpose). Not legal advice.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Microsoft Clarity (analytics) -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "x6od5uwr96");
+</script>
+
+<title>Terms of Use — ServerMind</title>
+<meta name="description" content="ServerMind terms of use: the software is free and open-source under the MIT License, provided as-is without warranty; you are responsible for the servers you manage with it." />
+<meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="ServerMind" />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://servermind.dev/terms.html" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Terms of Use — ServerMind" />
+<meta property="og:description" content="Free and open-source under the MIT License, provided as-is. You run it on your own servers." />
+<meta property="og:url" content="https://servermind.dev/terms.html" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- scroll progress -->
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<!-- ─── nav ─── -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="compare.html">Compare</a>
+      <a href="index.html#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="docs.html#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="doc-hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container">
+      <span class="doc-eyebrow">Legal</span>
+      <h1>Terms of Use</h1>
+      <p>ServerMind is free, open-source software. These terms cover the software itself and the servermind.dev website. By using either, you agree to them.</p>
+      <p style="opacity:.7;font-size:.9rem">Last updated: June 18, 2026</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <article class="prose">
+
+      <h2>1. The software is open-source (MIT)</h2>
+      <p>ServerMind is licensed under the <strong>MIT License</strong>. That license governs your rights to use, copy, modify, and distribute the software — see the <a href="https://github.com/AjjlalAhmed/servermind/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a> file. Nothing here restricts the rights the MIT License grants you; these terms add context for the website and hosted scripts.</p>
+
+      <h2>2. Provided "as is" — no warranty</h2>
+      <p>The software and this website are provided <strong>"as is", without warranty of any kind</strong>, express or implied, including but not limited to merchantability, fitness for a particular purpose, and non-infringement. To the maximum extent permitted by law, the authors and contributors are <strong>not liable</strong> for any claim, damages, or other liability arising from the software or its use — including data loss, downtime, or actions taken on your servers. You use it at your own risk.</p>
+
+      <h2>3. You run it; you're responsible for it</h2>
+      <p>ServerMind runs on infrastructure you control. You are responsible for:</p>
+      <ul>
+        <li><strong>Authorization</strong> — only install and point ServerMind at servers you own or are explicitly authorized to manage.</li>
+        <li><strong>Securing access</strong> — your login credentials, TOTP device, network exposure (use a tunnel or HTTPS), and keeping the host patched.</li>
+        <li><strong>The actions you take</strong> — ServerMind can run privileged changes only after you arm them; you are responsible for changes you approve, including those you set up as custom tools.</li>
+        <li><strong>Your data and backups</strong> — ServerMind is not a backup service.</li>
+      </ul>
+
+      <h2>4. AI providers &amp; third-party services</h2>
+      <p>ServerMind connects to an AI backend <em>you</em> choose and configure. Your use of that provider (Google, Anthropic, OpenAI-compatible APIs, a local model, etc.) is governed by <strong>that provider's own terms and pricing</strong>, under your own account — we are not a party to it and are not responsible for its availability, output, or charges. The website likewise relies on third-party services (e.g. a CDN and analytics) governed by their own terms.</p>
+
+      <h2>5. No endorsement of output</h2>
+      <p>Answers and suggested actions are generated by your AI provider and may be wrong. Review what the assistant proposes before arming a change. ServerMind's guardrails (read-only allowlist, the arm switch, read-only database access) reduce risk but do not guarantee correctness.</p>
+
+      <h2>6. Trademarks</h2>
+      <p>Product and company names referenced (e.g. on the comparison page) belong to their respective owners and are used for identification only; their mention is not an endorsement.</p>
+
+      <h2>7. Changes</h2>
+      <p>These terms may change as the project evolves; the "Last updated" date above reflects the current version. Continued use after a change means you accept it.</p>
+
+      <h2>8. Governing law</h2>
+      <p>These terms are governed by the laws of the maintainer's jurisdiction, without regard to conflict-of-law rules. Where the MIT License and these terms differ regarding the software, the MIT License controls.</p>
+
+      <h2>Contact</h2>
+      <p>Questions: open an issue at <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">github.com/AjjlalAhmed/servermind</a>.</p>
+
+      <p style="margin-top:2rem"><a href="privacy.html">Privacy Policy →</a></p>
+    </article>
+  </div>
+</main>
+
+<!-- ─── footer ─── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#security">Security</a>
+      <a href="compare.html">Compare</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>
