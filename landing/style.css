@@ -460,21 +460,6 @@ h1 {
 .scroll-prog i { display: block; height: 100%; width: 0;
   background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 12px var(--accent); }
 
-/* boot intro */
-.boot { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: grid; place-items: center;
-  transition: transform .8s cubic-bezier(.76,0,.24,1);
-  animation: bootSafety .01s linear 4.6s forwards; }
-@keyframes bootSafety { to { transform: translateY(-100%); visibility: hidden; } }
-.boot.lift { transform: translateY(-100%); }
-.boot-stage { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 0 24px; }
-.boot-ghost { width: 56px; height: 56px; filter: drop-shadow(0 0 24px rgba(245,165,36,.55));
-  animation: bootFloat 2.2s ease-in-out infinite; }
-@keyframes bootFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-.boot-log { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); line-height: 1.75;
-  text-align: left; min-height: 74px; min-width: 230px; }
-.boot-log .pr { color: var(--accent-2); }
-.boot-log .ok { color: var(--green); }
-
 /* auto-hiding nav */
 .nav { transition: transform .45s cubic-bezier(.16,1,.3,1), background .2s, border-color .2s; }
 .nav.hide { transform: translateY(-100%); }
@@ -509,7 +494,6 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .boot { display: none; }
   .how-step { opacity: 1; transform: none; }
 }
 

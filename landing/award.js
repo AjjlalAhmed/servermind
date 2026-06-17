@@ -10,42 +10,13 @@
 
   /* GSAP motion layer engaged → it owns the hero parallax, the magnetic/tilt
      hover effects and the How-it-works step activation, so those stand down
-     here. The boot intro, scroll-progress bar, auto-hiding nav and the big
-     statement word-rise are GSAP-agnostic and keep running. */
+     here. The scroll-progress bar, auto-hiding nav and the big statement
+     word-rise are GSAP-agnostic and keep running. */
   const GSAP = document.documentElement.classList.contains("sm-gsap");
 
-  /* ─── boot intro: type a short daemon boot log, then lift the curtain ─── */
-  (function boot() {
-    const el = $("#boot");
-    const booted = () => document.dispatchEvent(new Event("sm:booted")); // cue the GSAP hero entrance
-    if (!el) { booted(); return; }
-    const finish = () => {
-      el.classList.add("lift");
-      document.body.classList.remove("booting");
-      booted();
-      setTimeout(() => el.remove(), 850);
-    };
-    if (RM || sessionStorage.getItem("sm-booted")) { el.remove(); booted(); return; }
-    sessionStorage.setItem("sm-booted", "1");
-    document.body.classList.add("booting");
-
-    const log = $("#bootLog");
-    const lines = [["servermind init", ""], ["waking the daemon", " ok"], ["watching your stack", " ok"]];
-    let li = 0;
-    function typeLine() {
-      if (li >= lines.length) { setTimeout(finish, 360); return; }
-      const [txt, ok] = lines[li];
-      const row = document.createElement("div");
-      log.appendChild(row);
-      let i = 0;
-      (function ch() {
-        if (i <= txt.length) { row.innerHTML = '<span class="pr">&gt;</span> ' + txt.slice(0, i++); setTimeout(ch, 26); }
-        else { if (ok) row.innerHTML += '<span class="ok">' + ok + "</span>"; li++; setTimeout(typeLine, 200); }
-      })();
-    }
-    setTimeout(typeLine, 300);
-    setTimeout(() => { if (document.body.contains(el)) finish(); }, 4200); // hard safety
-  })();
+  /* The page renders straight away (no boot curtain). Still fire sm:booted so the
+     GSAP hero entrance gets its cue immediately. */
+  document.dispatchEvent(new Event("sm:booted"));
 
   /* ─── scroll progress + auto-hiding nav ─── */
   const prog = $("#sprog"), nav = $(".nav");
