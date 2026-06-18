@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Microsoft Clarity (analytics) -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "x6od5uwr96");
+</script>
+
+<title>ServerMind for homelabs &amp; self-hosting — a private AI copilot for your stack</title>
+<meta name="description" content="Docker, Pi-hole, media servers, the lot. ServerMind is a self-hosted AI copilot for your homelab that needs no domain, opens no inbound ports across nodes, and can run fully offline on a local Ollama model — your data never leaves the house." />
+<meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="Ajjlal Ahmed" />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://servermind.dev/use-case/homelab-self-hosting" />
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="ServerMind for homelabs &amp; self-hosting — a private AI copilot for your stack" />
+<meta property="og:description" content="A self-hosted AI copilot for your homelab: no domain needed, runs fully offline on Ollama, manages Docker, systemd and more." />
+<meta property="og:url" content="https://servermind.dev/use-case/homelab-self-hosting" />
+<meta property="og:image" content="https://servermind.dev/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ServerMind for homelabs &amp; self-hosting" />
+<meta name="twitter:description" content="A private, offline-capable AI copilot for your self-hosted stack." />
+<meta name="twitter:image" content="https://servermind.dev/og.png" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="../../style.css" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "headline": "ServerMind for homelabs and self-hosting — a private AI copilot for your stack",
+      "description": "How homelab and self-hosting enthusiasts use ServerMind as an offline-capable, self-hosted AI copilot.",
+      "url": "https://servermind.dev/use-case/homelab-self-hosting",
+      "inLanguage": "en",
+      "about": { "@type": "SoftwareApplication", "name": "ServerMind", "url": "https://servermind.dev/" },
+      "author": { "@type": "Organization", "name": "ServerMind", "url": "https://servermind.dev/" },
+      "publisher": { "@type": "Organization", "name": "ServerMind", "url": "https://servermind.dev/", "logo": "https://servermind.dev/favicon.svg" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Can ServerMind run fully offline?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Point it at a local Ollama model and nothing leaves your network — there's no cloud backend and no telemetry, so it's a fully self-hosted, zero-egress AI copilot for your homelab." } },
+        { "@type": "Question", "name": "Do I need a domain or to expose my homelab to the internet?", "acceptedAnswer": { "@type": "Answer", "text": "No. ServerMind binds to localhost and you reach it privately over an SSH tunnel or Tailscale. For multiple machines, agents dial OUT to the controller, so no new inbound ports are opened on any node." } },
+        { "@type": "Question", "name": "Does it manage Docker and the usual self-hosted services?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It works with Docker, systemd services, PM2, Nginx, Caddy, Redis, MySQL/MariaDB and fail2ban, plus disk, memory, ports and logs. You can also add your own custom tools — a frozen command, an HTTP health check, or a file to read." } }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://servermind.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Use cases", "item": "https://servermind.dev/use-cases.html" },
+        { "@type": "ListItem", "position": 3, "name": "Homelabs & self-hosting", "item": "https://servermind.dev/use-case/homelab-self-hosting" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="../../index.html">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="../../index.html#features">Features</a>
+      <a href="../../use-cases.html">Use cases</a>
+      <a href="../../compare.html">Compare</a>
+      <a href="../../index.html#faq">FAQ</a>
+      <a href="../../docs.html">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="../../docs.html#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="doc-hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container">
+      <span class="doc-eyebrow">Use case · Homelabs &amp; self-hosting</span>
+      <h1 class="reveal">A private AI copilot for your homelab</h1>
+      <p class="reveal">Docker stacks, Pi-hole, a media server, an Immich box, a NAS — your homelab does a lot, and you self-host precisely so your data stays yours. ServerMind fits that ethos: no cloud, no domain required, and it can run <em>entirely offline</em> on a local model.</p>
+    </div>
+  </section>
+
+  <div class="container" style="padding: 44px 24px 100px;">
+    <article class="prose" style="max-width: 820px;">
+
+      <section class="reveal">
+        <h2>The problem</h2>
+        <p class="lead">You self-host to own your data — so a cloud "AI assistant" that phones home is a non-starter.</p>
+        <p>Homelabs sprawl. You've got containers you set up months ago, services across a couple of machines, and a mental map that's always slightly out of date. Checking on it means SSH-ing into each box and running the same handful of commands, and most monitoring tools are either heavyweight enterprise platforms or SaaS that wants your metrics shipped off-site.</p>
+        <p>What you actually want is something small, local, and private — that you can simply ask "is everything up?" without anything leaving the house.</p>
+      </section>
+
+      <section class="reveal">
+        <h2>How ServerMind helps</h2>
+        <p>ServerMind installs on a homelab box in about two minutes and gives you a chat box plus a live dashboard. Ask about your stack in plain English; it runs the right read-only checks and explains what it finds.</p>
+        <div class="feat-asks">
+          <span>Are all my containers up?</span>
+          <span>How much disk is left on the NAS box?</span>
+          <span>Is Pi-hole responding?</span>
+          <span>Restart the media server</span>
+          <span>What's hammering the CPU?</span>
+          <span>Tail the docker logs for jellyfin</span>
+        </div>
+        <p>It manages the usual homelab cast — Docker, systemd services, PM2, Nginx, Caddy, Redis, MySQL/MariaDB and fail2ban — plus disk, memory, ports and logs. Add your own <strong>custom tools</strong> too: a frozen command for that one quirky service, an HTTP health check on a container, or a specific file to read.</p>
+      </section>
+
+      <section class="reveal">
+        <h2>Built for the self-hosting ethos</h2>
+        <ul>
+          <li><strong>Fully offline-capable.</strong> Point it at a local <strong>Ollama</strong> model and nothing leaves your network — no cloud backend, no telemetry, zero data egress.</li>
+          <li><strong>No domain, no exposure.</strong> It binds to localhost; reach it over an SSH tunnel or Tailscale. Got several machines? Agents dial OUT to the controller, so you open no inbound ports on any node — optionally over a self-hosted WireGuard mesh with no third-party coordinator.</li>
+          <li><strong>Free and yours.</strong> MIT open-source — fork it, audit it, run it forever. No accounts, no licence checks.</li>
+          <li><strong>Safe to leave on.</strong> Read-only allowlist by default; restarts and stops need the arm switch you control.</li>
+        </ul>
+      </section>
+
+      <section class="reveal">
+        <h2>One Pi or a rack of them</h2>
+        <p>A single machine runs zero-config. When your lab grows to several nodes, designate one as a <strong>controller</strong> and run lightweight <strong>agents</strong> on the rest — then ask one question across everything: <strong>"which boxes are low on disk?"</strong> Reports and alerts from every node land in one inbox, and you get a daily health digest plus alerts on high disk/memory, a downed service, or a TLS cert about to expire.</p>
+        <div class="callout note"><span class="ct">In one line</span>The convenience of an AI ops assistant, with the privacy a homelab is supposed to give you.</div>
+      </section>
+
+      <section class="reveal">
+        <h2>FAQ</h2>
+        <h3 class="cmp-tool">Can it run fully offline?</h3>
+        <p>Yes — with a local Ollama model nothing leaves your network. There's no cloud backend and no telemetry.</p>
+        <h3 class="cmp-tool">Do I need a domain or to expose my lab?</h3>
+        <p>No. It binds to localhost (reach it via SSH tunnel or Tailscale), and across multiple machines agents dial out, so no inbound ports are opened.</p>
+        <h3 class="cmp-tool">Does it handle Docker and friends?</h3>
+        <p>Yes — Docker, systemd, PM2, Nginx, Caddy, Redis, MySQL/MariaDB, fail2ban, plus disk, memory, ports and logs, and your own custom tools.</p>
+      </section>
+
+      <section class="reveal">
+        <h2>Get started</h2>
+        <div class="codeblock">
+          <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code></pre>
+          <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <p style="margin-top:18px"><strong>Related use cases:</strong> <a href="../../use-case/indie-developers">Indie developers</a> · <a href="../../use-case/incident-response">On-call &amp; incident response</a> · <a href="../../use-case/database-operations">Safe database operations</a></p>
+        <p><a href="../../use-cases.html">← All use cases</a> &nbsp;·&nbsp; <a href="../../docs.html">Read the setup guide →</a></p>
+      </section>
+
+    </article>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="../../index.html#features">Features</a>
+      <a href="../../use-cases.html">Use cases</a>
+      <a href="../../compare.html">Compare</a>
+      <a href="../../docs.html">Docs</a>
+      <a href="../../privacy.html">Privacy</a>
+      <a href="../../terms.html">Terms</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="../../script.js" defer></script>
+</body>
+</html>

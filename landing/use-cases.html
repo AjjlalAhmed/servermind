@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Microsoft Clarity (analytics) -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "x6od5uwr96");
+</script>
+
+<title>ServerMind use cases — who it's for and what you can do with it</title>
+<meta name="description" content="Real-world ways people use ServerMind: indie developers running a VPS without a sysadmin, agencies managing a fleet of client servers, startups without DevOps, on-call incident response, homelabs, and safe database queries — all from plain-English chat." />
+<meta name="theme-color" content="#0B0A07" />
+<meta name="author" content="Ajjlal Ahmed" />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://servermind.dev/use-cases.html" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ServerMind use cases — who it's for and what you can do" />
+<meta property="og:description" content="From indie VPS owners to agencies, startups, and homelabs — the real-world ways people manage Linux servers with ServerMind." />
+<meta property="og:url" content="https://servermind.dev/use-cases.html" />
+<meta property="og:image" content="https://servermind.dev/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ServerMind use cases" />
+<meta name="twitter:description" content="The real-world ways people manage Linux servers with ServerMind." />
+<meta name="twitter:image" content="https://servermind.dev/og.png" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono/index.css" />
+<link rel="stylesheet" href="style.css" />
+
+<!-- Structured data: collection + breadcrumb -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "name": "ServerMind use cases",
+      "description": "Real-world ways people use ServerMind to manage Linux servers with AI chat.",
+      "url": "https://servermind.dev/use-cases.html",
+      "inLanguage": "en",
+      "about": { "@type": "SoftwareApplication", "name": "ServerMind", "url": "https://servermind.dev/" },
+      "publisher": { "@type": "Organization", "name": "ServerMind", "url": "https://servermind.dev/", "logo": "https://servermind.dev/favicon.svg" }
+    },
+    {
+      "@type": "ItemList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Indie developers & solo founders", "url": "https://servermind.dev/use-case/indie-developers" },
+        { "@type": "ListItem", "position": 2, "name": "Agencies & freelancers", "url": "https://servermind.dev/use-case/agencies-freelancers" },
+        { "@type": "ListItem", "position": 3, "name": "Startups without DevOps", "url": "https://servermind.dev/use-case/startups-without-devops" },
+        { "@type": "ListItem", "position": 4, "name": "On-call & incident response", "url": "https://servermind.dev/use-case/incident-response" },
+        { "@type": "ListItem", "position": 5, "name": "Homelabs & self-hosting", "url": "https://servermind.dev/use-case/homelab-self-hosting" },
+        { "@type": "ListItem", "position": 6, "name": "Safe database operations", "url": "https://servermind.dev/use-case/database-operations" }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://servermind.dev/" },
+        { "@type": "ListItem", "position": 2, "name": "Use cases", "item": "https://servermind.dev/use-cases.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<div class="scroll-prog" aria-hidden="true"><i id="sprog"></i></div>
+
+<!-- ─── nav ─── -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg>
+      </span>
+      ServerMind
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="use-cases.html">Use cases</a>
+      <a href="compare.html">Compare</a>
+      <a href="index.html#faq">FAQ</a>
+      <a href="docs.html">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-primary" href="docs.html#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="doc-hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container">
+      <span class="doc-eyebrow">Use cases</span>
+      <h1 class="reveal">What can you do with ServerMind?</h1>
+      <p class="reveal">ServerMind is a self-hosted AI assistant for your Linux servers — you chat with your box (or a whole fleet) in plain English and it runs the right read-only checks, shows a live dashboard, and makes changes only when you arm it. Here's who reaches for it and the jobs it does best.</p>
+    </div>
+  </section>
+
+  <div class="container" style="padding: 44px 24px 100px;">
+
+    <div class="bento" style="margin-bottom: 56px;">
+
+      <a class="card reveal" href="use-case/indie-developers">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg></span>
+        <h3>Indie developers &amp; solo founders</h3>
+        <p>You shipped the app; now one VPS quietly runs it. Manage the box without becoming a sysadmin — ask instead of remembering commands.</p>
+        <div class="feat-asks">
+          <span>Is the site healthy?</span>
+          <span>Why is it slow?</span>
+        </div>
+      </a>
+
+      <a class="card reveal" href="use-case/agencies-freelancers">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+        <h3>Agencies &amp; freelancers</h3>
+        <p>A dozen client servers, all different. Put them under one login as a fleet, get one alerts inbox, and ask "which servers are unhealthy?"</p>
+        <div class="feat-asks">
+          <span>Which servers are unhealthy?</span>
+        </div>
+      </a>
+
+      <a class="card reveal" href="use-case/startups-without-devops">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+        <h3>Startups without DevOps</h3>
+        <p>No dedicated SRE yet. Give the whole team safe, plain-English access to production — guardrails stop anyone (or the AI) breaking it.</p>
+        <div class="feat-asks">
+          <span>Restart api-prod</span>
+        </div>
+      </a>
+
+      <a class="card reveal" href="use-case/incident-response">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+        <h3>On-call &amp; incident response</h3>
+        <p>Pager goes off at 2am. Skip the syntax — ask what changed, read the logs, find the memory hog, and fix it once you arm the change.</p>
+        <div class="feat-asks">
+          <span>Why is nginx down?</span>
+        </div>
+      </a>
+
+      <a class="card reveal" href="use-case/homelab-self-hosting">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+        <h3>Homelabs &amp; self-hosting</h3>
+        <p>Docker, Pi-hole, media servers, the works. A private AI copilot for your stack that needs no domain and can run fully offline on Ollama.</p>
+        <div class="feat-asks">
+          <span>Are all my containers up?</span>
+        </div>
+      </a>
+
+      <a class="card reveal" href="use-case/database-operations">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+        <h3>Safe database operations</h3>
+        <p>Ask "how many active orders?" and get the number — the AI writes a read-only <code>SELECT</code> that's validated before it runs. No write access, ever.</p>
+        <div class="feat-asks">
+          <span>How many signups today?</span>
+        </div>
+      </a>
+
+    </div>
+
+    <article class="prose" style="max-width: 760px; margin: 0 auto;">
+      <section class="reveal">
+        <h2>One tool, many jobs</h2>
+        <p>However you use it, the shape is the same: ServerMind is <strong>self-hosted</strong> (no cloud backend, no telemetry), it talks to your server through a <strong>read-only command allowlist</strong> so there's no raw shell to exploit, and any change — a restart, a stop — is refused until <em>you</em> flip a server-side <strong>arm switch</strong> the AI can't touch. You bring your own AI: the free Google Gemini tier, a Claude subscription, or any OpenAI-compatible API including local Ollama for zero data egress.</p>
+        <div class="callout note"><span class="ct">Not sure where you fit?</span>If you run one or more Linux servers and you'd rather ask a question than remember a command, ServerMind is for you. Start with the use case closest to your setup above, or read the <a href="compare.html">comparison with other tools</a>.</div>
+
+        <div class="codeblock" style="margin-top: 22px;">
+          <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/install.sh | bash</code></pre>
+          <button class="copy-btn" data-copy="curl -fsSL https://servermind.dev/install.sh | bash" aria-label="Copy install command">
+            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+        </div>
+        <p><a href="index.html">← Back to overview</a> &nbsp;·&nbsp; <a href="docs.html">Read the setup guide →</a></p>
+      </section>
+    </article>
+
+  </div>
+</main>
+
+<!-- ─── footer ─── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo sm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/><circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/><circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/></svg></span>
+      ServerMind
+    </div>
+    <div class="footer-links">
+      <a href="index.html#features">Features</a>
+      <a href="use-cases.html">Use cases</a>
+      <a href="compare.html">Compare</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/AjjlalAhmed/servermind" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-meta">Open-source · Self-hosted · MIT</div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>
