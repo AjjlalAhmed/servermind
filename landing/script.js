@@ -239,3 +239,64 @@ if (!GSAP) {
   cmd.addEventListener("focus", stop);
   if (auto) setTimeout(tick, 1100);
 })();
+
+/* Desktop downloads: make the visitor's OS the single gold (primary) button,
+   quiet the other to a ghost, and float it first. One clear download. */
+(function () {
+  var row = document.getElementById('downloads');
+  if (!row) return;
+  var ua = (navigator.userAgent || '').toLowerCase();
+  var plat = (navigator.platform || '').toLowerCase();
+  var os = null;
+  if (plat.indexOf('mac') > -1 || ua.indexOf('mac') > -1) os = 'mac';
+  else if (plat.indexOf('win') > -1 || ua.indexOf('win') > -1) os = 'win';
+  if (!os) return;
+  var mine = row.querySelector('.dl[data-os="' + os + '"]');
+  var other = row.querySelector('.dl:not([data-os="' + os + '"])');
+  if (mine) {
+    mine.classList.add('btn-primary'); mine.classList.remove('btn-ghost');
+    row.insertBefore(mine, row.firstChild);
+  }
+  if (other) { other.classList.add('btn-ghost'); other.classList.remove('btn-primary'); }
+})();
+
+/* Live GitHub star count — fills [data-gh-count] and reveals [data-gh-reveal]
+   on success only. Caches ~6h to stay under the unauthenticated rate limit.
+   On any failure it does nothing, so the static fallbacks (nav reads
+   "Star on GitHub" with no number; the hero star chip stays hidden) remain. */
+(function () {
+  var counts = document.querySelectorAll('[data-gh-count]');
+  if (!counts.length) return;
+  var KEY = 'sm_gh_stars';
+  var TTL = 6 * 60 * 60 * 1000;
+  var MIN = 25; // don't surface a star count until it signals real traction
+                // (below this it stays hidden — the honest fallback, never faked)
+
+  function fmt(n) {
+    try { return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n); }
+    catch (e) { return String(n); }
+  }
+  function paint(n) {
+    if (typeof n !== 'number' || !isFinite(n) || n < MIN) return;
+    counts.forEach(function (el) { el.textContent = fmt(n); });
+    document.querySelectorAll('[data-gh-reveal]').forEach(function (el) { el.removeAttribute('hidden'); });
+  }
+
+  try {
+    var cached = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (cached && (Date.now() - cached.ts) < TTL && typeof cached.n === 'number') {
+      paint(cached.n);
+      return; // fresh enough — skip the network
+    }
+  } catch (e) { /* ignore bad cache */ }
+
+  fetch('https://api.github.com/repos/AjjlalAhmed/servermind', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      var n = d && d.stargazers_count;
+      if (typeof n !== 'number') return;
+      paint(n);
+      try { localStorage.setItem(KEY, JSON.stringify({ n: n, ts: Date.now() })); } catch (e) { /* ignore */ }
+    })
+    .catch(function () { /* offline / rate-limited — keep the static fallback */ });
+})();

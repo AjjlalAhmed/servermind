@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17130D"/>
+      <stop offset="1" stop-color="#0B0A07"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.46" r="0.5">
+      <stop offset="0" stop-color="#F5A524" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#F5A524" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect x="2" y="2" width="1020" height="1020" rx="223" fill="none" stroke="#F5A524" stroke-opacity="0.18" stroke-width="3"/>
+  <circle cx="512" cy="472" r="300" fill="url(#glow)"/>
+  <g transform="translate(104,104) scale(34)">
+    <path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/>
+    <circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/>
+    <circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/>
+  </g>
+</svg>

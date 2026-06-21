@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServerMind</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-bar">
+      <div class="brand">
+        <span class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/>
+            <circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/>
+            <circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/>
+          </svg>
+        </span>
+        <div class="brand-name">ServerMind</div>
+      </div>
+      <button id="add-btn" class="primary" type="button">+ Controller</button>
+    </header>
+
+    <main class="content">
+      <div id="section-head" class="section-head hidden">
+        <span class="label">Controllers</span>
+        <span id="count" class="count"></span>
+      </div>
+
+      <div id="list" class="list" aria-live="polite"></div>
+
+      <section id="empty" class="empty hidden">
+        <span class="empty-logo">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.4C16.89 3.4 19.75 7.48 19.75 13.8C19.75 17.27 19.75 16.66 19.14 18.7C18.32 19.21 18.32 20.12 17.1 20.12C16.08 20.12 15.57 18.8 14.55 18.8C13.53 18.8 13.22 20.12 12 20.12C10.78 20.12 10.47 18.8 9.45 18.8C8.43 18.8 7.92 20.12 6.9 20.12C5.88 20.12 5.68 19.21 4.86 18.7C4.25 16.66 4.25 17.27 4.25 13.8C4.25 7.48 7.11 3.4 12 3.4Z" fill="#F5A524"/>
+            <circle cx="9.76" cy="12.5" r="1.7" fill="#fff"/>
+            <circle cx="14.24" cy="12.5" r="1.7" fill="#fff"/>
+          </svg>
+        </span>
+        <h2>Welcome to ServerMind</h2>
+        <p>This app is a secure window into your server's dashboard —
+          no domain, no reverse proxy, no certificates.</p>
+        <ol class="onboard">
+          <li><span class="ob-n">1</span><div><b>Install the controller</b><span>Run <code>curl&nbsp;servermind.dev/install.sh&nbsp;|&nbsp;bash</code> on your server.</span></div></li>
+          <li><span class="ob-n">2</span><div><b>Add it here</b><span>Host + SSH key for a remote box, or <em>Direct</em> for a local / Docker one.</span></div></li>
+          <li><span class="ob-n">3</span><div><b>Connect</b><span>One outbound SSH tunnel opens — nothing new is exposed.</span></div></li>
+          <li><span class="ob-n">4</span><div><b>Open &amp; log in</b><span>The dashboard loads — sign in with your password + 6-digit code.</span></div></li>
+        </ol>
+        <button id="empty-add" class="primary" type="button">+ Add your first controller</button>
+      </section>
+    </main>
+
+    <footer class="app-foot">
+      <span class="foot-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Secrets stay in your OS keychain
+      </span>
+      <span class="foot-ver">v0.1.0</span>
+    </footer>
+
+    <!-- Add / edit controller -->
+    <dialog id="dialog">
+      <form id="form" method="dialog">
+        <h2 id="form-title">Connect a controller</h2>
+
+        <label>Connection
+          <select name="connection" id="connection">
+            <option value="ssh">SSH tunnel — remote server</option>
+            <option value="direct">Direct — local / Docker / LAN (no SSH)</option>
+          </select>
+        </label>
+
+        <label>Name
+          <input name="label" type="text" placeholder="prod-controller" />
+        </label>
+
+        <div class="row">
+          <label class="grow">Host
+            <input name="host" id="host" type="text" placeholder="controller.example.com" required />
+          </label>
+          <label class="port ssh-only">SSH port
+            <input name="port" type="number" value="22" min="1" max="65535" />
+          </label>
+        </div>
+
+        <label class="ssh-only">SSH user
+          <input name="username" type="text" placeholder="root" />
+        </label>
+
+        <label class="ssh-only">Authentication
+          <select name="authMethod" id="authMethod">
+            <option value="agent">SSH agent</option>
+            <option value="key">Private key file</option>
+            <option value="password">Password</option>
+          </select>
+        </label>
+
+        <label class="auth-key hidden">Key path
+          <input name="keyPath" type="text" placeholder="~/.ssh/id_ed25519" />
+        </label>
+
+        <label class="auth-secret hidden" id="secret-label">Passphrase / password
+          <input name="secret" type="password" placeholder="leave blank if none" />
+        </label>
+
+        <label>ServerMind port on controller
+          <input name="remotePort" type="number" value="5500" min="1" max="65535" />
+        </label>
+
+        <p class="err hidden" id="form-err"></p>
+
+        <menu>
+          <button value="cancel" class="ghost" type="submit" formnovalidate>Cancel</button>
+          <button value="save" class="primary" id="save-btn" type="submit">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

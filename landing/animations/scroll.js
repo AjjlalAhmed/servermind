@@ -57,7 +57,7 @@ export function initScroll(ctx) {
     .filter(
       (el) =>
         !el.closest(".hero") && // hero.js owns the above-the-fold entrance
-        !el.classList.contains("card") && // feature cards animate off their grid
+        !(el.classList.contains("card") && el.closest(".bento")) && // bento cards animate off their grid; other .card reveals normally here
         !el.classList.contains("chapter"), // chapters get the left-slide treatment
     );
 

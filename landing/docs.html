@@ -129,6 +129,7 @@
       <a href="#install">Install</a>
       <a href="#ai">Choose your AI</a>
       <a href="#access">Accessing it</a>
+      <a href="#desktop">Desktop app</a>
       <a href="#after">After install</a>
       <a href="#email">Email reports & alerts</a>
       <a href="#fleet">Multiple servers</a>
@@ -260,9 +261,39 @@ servermind.example.com {
         <div class="callout danger"><span class="ct">Don't</span>Don't set <code>BIND_HOST=0.0.0.0</code> and browse to <code>http://server-ip:5500</code> directly — that sends your credentials in cleartext. Use a tunnel, a tailnet, or HTTPS.</div>
       </section>
 
+      <!-- Desktop app -->
+      <section id="desktop" class="reveal">
+        <h2><span class="h2-no">05</span> Desktop app</h2>
+        <p class="lead">The recommended way to reach your dashboard. <strong>ServerMind Desktop</strong> opens one outbound SSH tunnel to your controller and shows its dashboard in a native window — no domain, reverse proxy, certificate, or manual <code>ssh -L</code>. It's a viewer: nothing on your servers depends on it.</p>
+
+        <h3>Download</h3>
+        <ul>
+          <li><strong>macOS</strong> — <a href="https://github.com/AjjlalAhmed/servermind/releases/latest/download/ServerMind.dmg">ServerMind.dmg</a> (universal: Apple Silicon + Intel). First launch: right-click the app → <strong>Open</strong> (unsigned beta).</li>
+          <li><strong>Windows</strong> — <a href="https://github.com/AjjlalAhmed/servermind/releases/latest/download/ServerMind-Setup.exe">ServerMind-Setup.exe</a> (Windows 10/11). First launch: <strong>More info → Run anyway</strong>.</li>
+        </ul>
+        <div class="callout note"><span class="ct">Install the controller first</span>The app connects to a running ServerMind controller — install it on your server (steps 02–03 above) before you add it here.</div>
+
+        <h3>Connect over SSH (a remote server)</h3>
+        <p>Click <strong>+ Controller</strong>, choose <strong>SSH tunnel</strong>, and fill in how you reach the box over SSH:</p>
+        <ul>
+          <li><strong>Host</strong> — your server's IP or hostname; <strong>SSH user</strong> — e.g. <code>root</code> or <code>ubuntu</code>.</li>
+          <li><strong>Authentication</strong> — <em>Private key file</em> (e.g. <code>~/.ssh/id_ed25519</code>), <em>SSH agent</em> (a key already loaded), or <em>Password</em>. This is your <strong>SSH</strong> login — not your ServerMind password.</li>
+          <li><strong>ServerMind port</strong> — <code>5500</code>.</li>
+        </ul>
+        <p>The app forwards a random local port to the controller's <code>127.0.0.1:5500</code>, pins the SSH host key on first connect, and stores any secret in your OS keychain.</p>
+
+        <h3>Connect directly (local / Docker / LAN)</h3>
+        <p>If the controller is already reachable from your machine (local Docker, a LAN box, or a tailnet), pick <strong>Direct — no SSH</strong>, set <strong>Host</strong> to <code>localhost</code> (or the box's address) and <strong>port</strong> <code>5500</code>. No SSH credentials needed.</p>
+
+        <h3>Log in</h3>
+        <p>Click <strong>Connect</strong> → <strong>Open dashboard</strong>. The controller's own login appears — enter your <strong>password and 6-digit TOTP code</strong>. (The Add-controller form only gets you to the box; this is the app's own login.)</p>
+
+        <div class="callout note"><span class="ct">Why it's safe</span>One outbound SSH tunnel — nothing new is exposed to the internet, the controller stays bound to localhost, and the desktop app never bypasses your password + 2FA.</div>
+      </section>
+
       <!-- After install -->
       <section id="after" class="reveal">
-        <h2><span class="h2-no">05</span> After install</h2>
+        <h2><span class="h2-no">06</span> After install</h2>
         <ul>
           <li><strong>Start on boot</strong> — run <code>pm2 startup</code> and execute the command it prints, then <code>pm2 save</code>.</li>
           <li><strong>Logs</strong> — <code>pm2 logs servermind</code>.</li>
@@ -275,7 +306,7 @@ servermind.example.com {
 
       <!-- Email reports & alerts -->
       <section id="email" class="reveal">
-        <h2><span class="h2-no">06</span> Email reports &amp; alerts</h2>
+        <h2><span class="h2-no">07</span> Email reports &amp; alerts</h2>
         <p class="lead">ServerMind can email you a daily health report and alert you the moment something needs attention — no extra service to run.</p>
         <h3>What you get</h3>
         <ul>
@@ -302,7 +333,7 @@ servermind.example.com {
 
       <!-- Multiple servers (fleet) -->
       <section id="fleet" class="reveal">
-        <h2><span class="h2-no">07</span> Multiple servers (fleet)</h2>
+        <h2><span class="h2-no">08</span> Multiple servers (fleet)</h2>
         <p class="lead">A single server needs none of this — it works on its own, zero config. When you want to watch and manage several servers from one place, turn one instance into a <strong>controller</strong> and have the others connect to it as <strong>agents</strong>.</p>
         <p>Agents dial <em>out</em> to the controller over one WebSocket, so you don't open any new inbound ports on them. Every server keeps enforcing its <strong>own</strong> read-only allowlist and arm switch — the controller can ask a server to do something, but it can't bypass that server's guardrails.</p>
 
@@ -334,7 +365,7 @@ servermind.example.com {
 
       <!-- Custom tools -->
       <section id="custom-tools" class="reveal">
-        <h2><span class="h2-no">08</span> Custom tools</h2>
+        <h2><span class="h2-no">09</span> Custom tools</h2>
         <p class="lead">The built-in tools cover the common cases. <strong>Custom tools</strong> let you teach the assistant about <em>your</em> stack — your database, your health endpoint, your one diagnostic command — without writing code or weakening the safety model. Add, edit, test and remove them from the dashboard's <strong>Tools</strong> tab (operator only, behind your login).</p>
         <p>The core idea: <strong>you define and freeze the tool; the AI can only trigger it.</strong> The model never supplies a command, path, or URL — it just decides <em>when</em> to call what you already approved. The one exception is the DB console, where the AI writes a <em>read-only</em> query that's validated before it runs.</p>
 
@@ -409,7 +440,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO sm_ro;</code
 
       <!-- Uninstall -->
       <section id="uninstall" class="reveal">
-        <h2><span class="h2-no">09</span> Uninstall</h2>
+        <h2><span class="h2-no">10</span> Uninstall</h2>
         <p class="lead">One command removes ServerMind cleanly. It won't touch Bun, PM2, or git — you probably use those elsewhere.</p>
         <div class="codeblock">
           <pre><code><span class="prompt">$</span> curl -fsSL https://servermind.dev/uninstall.sh | bash</code></pre>
@@ -428,7 +459,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO sm_ro;</code
 
       <!-- Security -->
       <section id="security" class="reveal">
-        <h2><span class="h2-no">10</span> Security model</h2>
+        <h2><span class="h2-no">11</span> Security model</h2>
         <p class="lead">Security is enforced server-side, below the model — not by trusting the AI to behave.</p>
         <ul>
           <li><strong>No shell.</strong> Every command runs as <code>argv</code> against a read-only allowlist — no <code>rm</code>, no writes, no network. Command injection is structurally impossible. File reads are confined to safe roots; secrets like <code>/proc/*/environ</code> are blocked.</li>
@@ -444,7 +475,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO sm_ro;</code
 
       <!-- Troubleshooting -->
       <section id="troubleshooting" class="reveal">
-        <h2><span class="h2-no">11</span> Troubleshooting</h2>
+        <h2><span class="h2-no">12</span> Troubleshooting</h2>
 
         <h3>I can't open the dashboard</h3>
         <p>It's bound to localhost by design. From your laptop, open an SSH tunnel (<a href="#access">above</a>) and visit <code>http://localhost:5500</code> — don't expect to hit the server's public IP directly.</p>

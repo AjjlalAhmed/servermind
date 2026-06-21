@@ -98,7 +98,7 @@ h1 {
   stroke-dasharray: 280; stroke-dashoffset: 280; opacity: .9; }
 .reveal.in .ul-line path { animation: draw .9s .55s cubic-bezier(.6,0,.2,1) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.lede { font-size: clamp(16px, 2.1vw, 18.5px); color: var(--text-dim); max-width: 540px; margin: 0 0 32px; line-height: 1.62; }
+.lede { font-size: clamp(16px, 2.1vw, 19px); color: #C6CAD3; max-width: 460px; margin: 0 0 30px; line-height: 1.55; }
 
 /* install command */
 .install {
@@ -117,7 +117,7 @@ h1 {
 .copy-btn .i-check { display: none; color: var(--green); }
 .copy-btn.copied .i-copy { display: none; }
 .copy-btn.copied .i-check { display: block; }
-.install-note { font-size: 13px; color: var(--text-muted); margin-top: 14px; }
+.install-note { font-size: 12.5px; color: var(--text-faint); margin-top: 10px; }
 
 /* product preview window */
 .preview { margin-top: 60px; position: relative; z-index: 1; }
@@ -541,7 +541,7 @@ h1 {
 }
 
 /* ══════════════ Hero: a conversation with Mindy (a named daemon) ══════════════ */
-.hero-copy h1 { font-size: clamp(42px, 6.4vw, 68px); }
+.hero-copy h1 { font-size: clamp(46px, 7.4vw, 82px); line-height: 0.98; letter-spacing: -0.045em; margin-bottom: 26px; }
 
 @keyframes pulseDot {
   0%   { box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
@@ -747,3 +747,117 @@ h1 {
 .prose .cmp-vs strong { color: var(--text); }
 .prose .cmp-diff { color: var(--text-dim); font-size: 14.5px; line-height: 1.66; margin-top: 6px; }
 .prose .cmp-diff b { color: var(--accent-2); font-weight: 600; }
+
+/* ─── Desktop app section ─── */
+.desktop-points { list-style: none; padding: 0; margin: 0 0 28px; display: flex; flex-direction: column; gap: 11px; }
+.desktop-points li { position: relative; padding-left: 26px; color: var(--text-dim); font-size: 14.5px; line-height: 1.5; }
+.desktop-points li::before {
+  content: ""; position: absolute; left: 0; top: 7px; width: 14px; height: 14px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 4px;
+}
+.desktop-points li::after {
+  content: ""; position: absolute; left: 4px; top: 10px; width: 5px; height: 8px;
+  border: solid var(--accent-2); border-width: 0 2px 2px 0; transform: rotate(40deg);
+}
+.desktop-points strong { color: var(--text); font-weight: 600; }
+
+.download-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.btn.dl { display: inline-flex; align-items: center; gap: 9px; padding: 12px 20px; font-size: 14.5px; }
+.btn.dl svg { width: 18px; height: 18px; flex: none; }
+.dl-note { font-size: 12.5px; color: var(--text-faint); max-width: 520px; line-height: 1.6; margin: 0; }
+.dl-note em { color: var(--text-dim); font-style: normal; font-family: var(--font-mono); font-size: 11.5px; }
+.dl-beta {
+  display: inline-block; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--accent-2); background: var(--accent-soft); border: 1px solid var(--accent-line);
+  border-radius: 999px; padding: 1px 8px; vertical-align: middle;
+}
+
+/* App-window mockup */
+.desktop-shot { display: flex; align-items: center; justify-content: center; }
+.dwin {
+  width: 100%; max-width: 360px; background: var(--bg);
+  border: 1px solid var(--border-2); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+}
+.dwin-bar { display: flex; align-items: center; gap: 6px; padding: 10px 13px; background: var(--surface-2); border-bottom: 1px solid var(--border); position: relative; }
+.dwin-bar span { width: 9px; height: 9px; border-radius: 50%; background: #3a3a3a; }
+.dwin-bar span:nth-child(1) { background: #ff5f57; }
+.dwin-bar span:nth-child(2) { background: #febc2e; }
+.dwin-bar span:nth-child(3) { background: #28c840; }
+.dwin-bar b { position: absolute; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--text-dim); font-weight: 600; }
+.dwin-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; background:
+  radial-gradient(120% 60% at 50% -10%, rgba(245,165,36,0.07), transparent 60%), var(--bg); }
+.dwin-head { display: flex; align-items: center; gap: 8px; padding: 2px 2px 6px; }
+.dwin-logo { width: 20px; height: 20px; }
+.dwin-head b { font-size: 13px; font-weight: 600; color: var(--text); }
+.dwin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; }
+.dwin-card.dim { opacity: 0.6; }
+.dwin-row { display: flex; align-items: flex-start; gap: 9px; }
+.dwin-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 3px; box-shadow: 0 0 0 0 rgba(74,222,128,0.5); animation: dpulse 2s infinite; }
+.dwin-pulse.off { background: var(--text-faint); animation: none; }
+@keyframes dpulse { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.45); } 70% { box-shadow: 0 0 0 6px rgba(74,222,128,0); } 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); } }
+.dwin-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.dwin-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.dwin-row > div { flex: 1; }
+.dwin-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--green); background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.dwin-badge.off { color: var(--text-faint); background: transparent; border-color: var(--border); }
+.dwin-meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.dwin-chip { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+.dwin-ep { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); }
+
+/* ─── Hero: compact desktop-app link ─── */
+.hero-desktop-link {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 22px;
+  color: var(--text-dim); font-size: 13.5px; text-decoration: none;
+  transition: color .16s;
+}
+.hero-desktop-link:hover { color: var(--accent-2); }
+.hero-desktop-link svg { width: 16px; height: 16px; color: var(--accent-2); transition: transform .16s; }
+.hero-desktop-link:hover svg { transform: translateX(3px); }
+
+/* ─── Desktop section: confident headline (scoped) + calmer download note ─── */
+#desktop .split h2 { font-size: clamp(34px, 5.4vw, 58px); line-height: 1.0; letter-spacing: -0.04em; }
+.dl-note { display: flex; flex-direction: column; gap: 4px; }
+.dl-fine { color: var(--text-faint); font-size: 11.5px; }
+
+/* ════════════════ Landing revamp: new bands + design polish ════════════════ */
+
+/* — Typography polish: tighter, more confident section headings (page-wide) — */
+.sec-head h2, .split h2, .story-copy h2, .how-aside h2 { line-height: 1.04; letter-spacing: -0.035em; }
+
+/* — Hero: honest proof strip (replaces the old install-note) — */
+.hero-proof { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 16px; }
+.proof-chip {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 6px;
+  padding: 4px 10px; white-space: nowrap; line-height: 1.4;
+}
+.proof-chip.star { text-decoration: none; transition: border-color .15s, color .15s; }
+.proof-chip.star:hover { border-color: var(--accent-line); color: var(--accent-2); }
+.proof-chip.star [data-gh-count] { color: var(--accent-2); font-weight: 600; }
+
+/* nav star count (revealed on a successful fetch; "Star on GitHub" otherwise) */
+.gh-count { color: var(--text-faint); }
+.gh-count [data-gh-count] { color: var(--accent-2); font-weight: 600; }
+
+/* — Framing bands (clarity, cost): read as a continuation, not a full section — */
+.section.define { padding-top: 56px; }
+.define .sec-head { max-width: 860px; margin-bottom: 36px; }
+.sec-head h2.define-lead {
+  font-size: clamp(20px, 2.6vw, 30px); line-height: 1.32; letter-spacing: -0.02em;
+  font-weight: 600; color: var(--text); margin: 12px 0 0;
+}
+.define-lead strong, .define-lead em { color: var(--text); font-style: normal; }
+
+/* — Persona / compare closing link — */
+.who-more { margin-top: 28px; font-size: 14.5px; }
+.who-more a { color: var(--accent-2); }
+.who-more a:hover { text-decoration: underline; }
+
+/* — Cost band: balanced two-column, smaller column headings — */
+.cost-split { align-items: start; gap: 48px; }
+.cost-split h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.06; margin: 10px 0 16px; }
+.cost-split .install { margin-top: 18px; }
+
+/* — Final CTA microcopy — */
+.cta-fine { margin-top: 18px; font-size: 12.5px; color: var(--text-faint); }

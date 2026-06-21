@@ -1,0 +1,52 @@
+# Builds the ServerMind desktop app for macOS + Windows and uploads the
+# installers to a GitHub Release. Trigger by pushing a tag like `desktop-v0.1.0`.
+#
+# electron-builder creates a DRAFT release (named v<version> from
+# desktop/package.json). After the run finishes, open Releases, review the
+# draft, and click "Publish" — that makes it the "latest" release so the
+# landing-page download links (/releases/latest/download/...) resolve.
+#
+# Unsigned for now: macOS users right-click → Open the first time; Windows
+# users click "More info → Run anyway". Add signing later (Apple Developer ID
+# notarization + Windows Authenticode) without changing this workflow's shape.
+
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - "desktop-v*"
+  workflow_dispatch: {} # allow manual runs for testing
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (tsc + copy assets)
+        run: npm run build
+
+      - name: Package & publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx --no-install electron-builder --publish always

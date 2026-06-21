@@ -1,0 +1,64 @@
+{
+  "name": "servermind-desktop",
+  "version": "0.1.0",
+  "description": "ServerMind Desktop — a secure SSH tunnel + dashboard window for your ServerMind controller. No domain, no reverse proxy, no certs.",
+  "license": "MIT",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-static.js",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ssh2": "^1.15.1",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "dev.servermind.desktop",
+    "productName": "ServerMind",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "icon": "build/icon.png",
+    "publish": {
+      "provider": "github",
+      "owner": "AjjlalAhmed",
+      "repo": "servermind"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "artifactName": "ServerMind.${ext}"
+    },
+    "dmg": {
+      "title": "ServerMind",
+      "artifactName": "ServerMind.${ext}"
+    },
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "ServerMind-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Development",
+      "artifactName": "ServerMind.${ext}"
+    }
+  }
+}
