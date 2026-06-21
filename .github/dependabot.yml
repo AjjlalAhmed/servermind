@@ -1,0 +1,25 @@
+# Dependabot keeps the desktop app's supply chain and the CI/release actions
+# current, and alerts on known-vulnerable versions. Grouped weekly PRs keep the
+# noise low. (The root server is a Bun project; Dependabot's npm updater targets
+# the desktop app's package-lock.json, which is what ships in the binaries.)
+version: 2
+updates:
+  # Desktop app (Electron) — the dependencies that get built into the installers.
+  - package-ecosystem: "npm"
+    directory: "/desktop"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      desktop-dependencies:
+        patterns: ["*"]
+
+  # GitHub Actions used by the release + CI workflows (keeps the pinned SHAs fresh).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      ci-actions:
+        patterns: ["*"]
