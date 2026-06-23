@@ -81,12 +81,12 @@ const POLICY: Record<string, ArgValidator> = {
     // Read-only AND tightly bounded. The old deny-list only checked flag NAMES,
     // so positional MATCH expressions (_SYSTEMD_UNIT=…, _UID=0, /usr/bin/sudo) and
     // a missing -u dumped the entire merged system journal (secrets included).
-    // Now: every value is validated and a managed-unit -u filter is required.
+    // Now: every value is validated and a -u <unit> filter is REQUIRED. The unit
+    // may be ANY valid unit name (not just a pre-registered one) — reading a
+    // single unit's own log is what diagnosis needs; the mandatory -u + bounds
+    // still prevent the whole-journal dump that was the real secret-leak risk.
     const boolFlags = new Set(["--no-pager", "-e", "-x", "-b", "-r"]);
     const valueFlags = new Set(["-u", "-n", "--since", "-p"]);
-    const units = new Set(
-      [...config.managedServices, ...config.monitoredUnits].flatMap((u) => [u, `${u}.service`]),
-    );
     let hasUnit = false;
     for (let i = 0; i < args.length; i++) {
       const a = args[i]!;
@@ -96,7 +96,7 @@ const POLICY: Record<string, ArgValidator> = {
       const val = args[++i];
       if (val === undefined || val.startsWith("-")) return `journalctl: ${a} requires a value`;
       if (a === "-u") {
-        if (!units.has(val)) return `journalctl: unit not allowed: ${val} (managed units only)`;
+        if (!/^[A-Za-z0-9_.@-]{1,128}$/.test(val)) return `journalctl: invalid unit name: ${val}`;
         hasUnit = true;
       } else if (a === "-n") {
         if (!/^\d{1,4}$/.test(val)) return `journalctl: -n requires a number (max 9999): ${val}`;
@@ -107,7 +107,7 @@ const POLICY: Record<string, ArgValidator> = {
         if (/[/=]/.test(val)) return `journalctl: invalid --since value: ${val}`;
       }
     }
-    if (!hasUnit) return "journalctl requires -u <managed-unit> (whole-journal reads are not permitted)";
+    if (!hasUnit) return "journalctl requires -u <unit> (whole-journal reads are not permitted)";
     return null;
   },
 
@@ -217,6 +217,28 @@ const POLICY: Record<string, ArgValidator> = {
       if (a.startsWith("-")) return `getent: flags not allowed: ${a}`;
       if (!HOSTISH.test(a) && !IPISH.test(a) && !/^[a-z0-9_./-]{1,128}$/i.test(a)) return `getent: invalid key: ${a}`;
     }
+    return null;
+  },
+
+  // redis-cli: READ-ONLY inspection of the local Redis (queue depth, key peek,
+  // INFO). Writes (SET/DEL/FLUSHALL/RENAME/EXPIRE…) and connection flags that
+  // could point elsewhere or pass auth (-h/-p/-a/-u) are refused — only an
+  // optional `-n <db>` selector is allowed before the subcommand. The default
+  // connection is localhost:6379, the same box ServerMind runs on.
+  "redis-cli": (args) => {
+    const readonly = new Set([
+      "llen", "lrange", "lindex", "get", "mget", "getrange", "strlen", "type",
+      "ttl", "pttl", "exists", "scard", "smembers", "sismember", "zcard", "zrange",
+      "zscore", "hlen", "hget", "hmget", "hgetall", "hkeys", "dbsize", "info",
+      "ping", "scan", "keys", "memory", "object", "randomkey", "lpos",
+    ]);
+    let i = 0;
+    if (args[i] === "-n") { const n = args[++i]; if (n === undefined || !/^\d{1,2}$/.test(n)) return "redis-cli: -n needs a db number"; i++; }
+    const sub = (args[i] ?? "").toLowerCase();
+    if (!sub) return "redis-cli: a read-only subcommand is required (e.g. llen, get, type, ttl, info)";
+    if (sub.startsWith("-")) return `redis-cli: connection flags are not allowed (only -n <db> before the subcommand): ${sub}`;
+    if (!readonly.has(sub)) return `redis-cli: only read-only subcommands are allowed (llen, lrange, get, type, ttl, exists, scard, hgetall, scan, dbsize, info, …): ${sub}`;
+    for (let j = i + 1; j < args.length; j++) if (args[j]!.length > 256) return "redis-cli: argument too long";
     return null;
   },
 };

@@ -73,16 +73,16 @@ describe("run_shell enforces per-command argument policy", () => {
   test("disallowed flags are refused", async () => {
     expect(await rejected("df --output=source")).toBeTruthy();
   });
-  test("journalctl requires a managed-unit filter and rejects whole-journal reads", async () => {
-    // Without -u it would dump the entire merged system journal — refused now.
+  test("journalctl requires a -u filter and rejects whole-journal reads", async () => {
+    // Without -u it would dump the entire merged system journal — refused.
     expect(await rejected("journalctl --no-pager")).toBeTruthy();
     expect(await rejected("journalctl -n 100")).toBeTruthy();
     // Positional MATCH expressions (the old bypass) are refused.
     expect(await rejected("journalctl -u nginx _UID=0")).toBeTruthy();
     expect(await rejected("journalctl _SYSTEMD_UNIT=ssh.service")).toBeTruthy();
-    // Unmanaged units are refused.
-    expect(await rejected("journalctl -u ssh")).toBeTruthy();
-    // A bounded read of a managed unit is allowed.
+    // Any valid unit name is now allowed (a single unit's own log is read-only
+    // and is what diagnosis needs) — but the name itself is still validated.
+    expect(await accepted("journalctl -u ssh -n 50 --no-pager")).toBeUndefined();
     expect(await accepted("journalctl -u nginx -n 50 --no-pager")).toBeUndefined();
   });
 });
@@ -130,5 +130,39 @@ describe("run_shell network/mail diagnostics: validation", () => {
     expect(await accepted("nslookup -type=mx example.com")).toBeUndefined();
     expect(await rejected("host -f batchfile")).toBeTruthy();
     expect(await rejected("nslookup -type=axfr example.com")).toBeTruthy();
+  });
+});
+
+describe("run_shell journalctl reads any unit's log (not just managed)", () => {
+  test("a custom unit is now allowed with -u + bounds", async () => {
+    expect(await accepted("journalctl -u worker-daemon -n 100 --no-pager")).toBeUndefined();
+    expect(await accepted("journalctl -u worker-daemon.service -n 50 --no-pager")).toBeUndefined();
+  });
+  test("still requires -u and still blocks whole-journal + match expressions", async () => {
+    expect(await rejected("journalctl --no-pager")).toBeTruthy();
+    expect(await rejected("journalctl -u worker-daemon _UID=0")).toBeTruthy();
+    expect(await rejected("journalctl -u 'bad unit;rm'")).toBeTruthy();
+  });
+});
+
+describe("run_shell redis-cli is read-only", () => {
+  test("read-only subcommands are allowed", async () => {
+    expect(await accepted("redis-cli llen job_queue")).toBeUndefined();
+    expect(await accepted("redis-cli -n 0 llen job_queue")).toBeUndefined();
+    expect(await accepted("redis-cli info")).toBeUndefined();
+    expect(await accepted("redis-cli type somekey")).toBeUndefined();
+  });
+  test("writes and connection flags are refused", async () => {
+    for (const cmd of [
+      "redis-cli set k v",
+      "redis-cli del job_queue",
+      "redis-cli flushall",
+      "redis-cli rpush job_queue x",
+      "redis-cli -h evil.example.com llen q",
+      "redis-cli -a secret get k",
+      "redis-cli",
+    ]) {
+      expect(await rejected(cmd)).toBeTruthy();
+    }
   });
 });

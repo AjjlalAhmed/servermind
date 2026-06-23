@@ -48,10 +48,11 @@ export const TOOL_SPECS: ToolSpec[] = [
   {
     name: "service_action",
     description:
-      "Manage a systemd service. status is read-only/safe. start/stop/restart/" +
-      "enable are MUTATING/privileged and require explicit user confirmation in " +
-      "chat first. Only managed units are allowed (nginx, caddy, mysql/mariadb, " +
-      "redis-server, docker, fail2ban).",
+      "Manage a systemd service. status is read-only/safe and works for ANY unit " +
+      "(use it to inspect a custom worker/daemon, e.g. its Active state and recent " +
+      "log lines). start/stop/restart/enable are MUTATING/privileged, require " +
+      "explicit user confirmation in chat first, and are limited to managed units " +
+      "(nginx, caddy, mysql/mariadb, redis-server, docker, fail2ban).",
     schema: {
       service: z.string().describe("Unit name, e.g. 'nginx' (.service suffix optional)"),
       action: z.enum(["status", "start", "stop", "restart", "enable"]),

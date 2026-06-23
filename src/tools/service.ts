@@ -33,16 +33,13 @@ export async function serviceAction(
   if (!SERVICE_RE.test(svc)) {
     return fail(svc, action, `invalid service name: ${service}`);
   }
-  if (!KNOWN_SERVICES.has(svc)) {
-    return fail(
-      svc,
-      action,
-      `service '${svc}' is not in the managed allowlist (${[...KNOWN_SERVICES].join(", ")})`,
-    );
-  }
 
   const privileged = MUTATING.includes(action);
 
+  // status is read-only and safe for ANY unit — diagnosing a problem (e.g. a
+  // custom worker that died) shouldn't require pre-registering it in
+  // MANAGED_SERVICES. Only MUTATIONS stay locked to the managed allowlist, so a
+  // stray "stop ssh" still can't lock everyone out.
   if (action === "status") {
     const r = await exec(["systemctl", "status", svc, "--no-pager", "-l"], {
       timeoutMs: 10_000,
@@ -56,6 +53,14 @@ export async function serviceAction(
       privileged: false,
       output: r.stdout || r.stderr,
     };
+  }
+
+  if (!KNOWN_SERVICES.has(svc)) {
+    return fail(
+      svc,
+      action,
+      `service '${svc}' is not in the managed allowlist (${[...KNOWN_SERVICES].join(", ")}) — only 'status' is available for unmanaged units`,
+    );
   }
 
   // Privileged path. Requires that the running user can sudo systemctl
