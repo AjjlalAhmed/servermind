@@ -287,6 +287,76 @@ function renderMarkdown(text) {
   flushList(); if (inCode) html += "</code></pre>"; return html;
 }
 
+// Pull custom-tool manifests the model emits when it's blocked by the allowlist,
+// so chat can render an "Add this tool" card instead of raw JSON. Primary signal
+// is a ```servermind-tool block, but we're tolerant: a ```json or untagged fenced
+// block is also accepted IF its content parses to manifest(s) — every item must
+// have a known `kind` and a `name`, so ordinary JSON code blocks are left alone.
+// Returns the prose with the accepted blocks removed + the deduped manifests.
+const TOOL_KINDS = new Set(["command", "command_console", "db_query", "db_console", "http_check", "read_file"]);
+const looksLikeManifest = (o) => o && typeof o === "object" && TOOL_KINDS.has(o.kind) && typeof o.name === "string";
+function extractToolBlocks(md) {
+  const re = /```([\w-]*)\s*\n([\s\S]*?)```/g;
+  const manifests = [], seen = new Set();
+  const clean = md.replace(re, (full, lang, inner) => {
+    const tag = (lang || "").toLowerCase();
+    if (tag && tag !== "servermind-tool" && tag !== "json") return full; // never touch non-JSON code
+    let parsed;
+    try { parsed = JSON.parse(inner.trim()); } catch { return full; }
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    if (!items.length || !items.every(looksLikeManifest)) return full;     // not a tool request → leave it
+    for (const t of items) { const k = `${t.name}|${t.kind}`; if (!seen.has(k)) { seen.add(k); manifests.push(t); } }
+    return "";
+  }).replace(/\n{3,}/g, "\n\n").trim();
+  return { clean, manifests };
+}
+
+// The "ServerMind needs a tool" card. The operator reviews the frozen manifest and
+// adds it in one click; once saved the MCP server exposes it with no restart, so
+// the next message can call it. Same validation path as the Tools panel.
+// `question` is the message that triggered the request, so we can offer one-click
+// re-run once the tool is added.
+function addToolRequestCard(body, manifests, question) {
+  const many = manifests.length > 1;
+  const mutating = manifests.some((t) => t && t.mutating === true);
+  const card = document.createElement("div");
+  card.className = "tool-req";
+  card.innerHTML = `
+    <div class="tr-head">🔧 ServerMind needs ${many ? manifests.length + " tools" : "a tool"} to continue</div>
+    <div class="tr-sub">Review the frozen command${many ? "s" : ""}, then add ${many ? "them" : "it"} — the AI can only trigger ${many ? "them" : "it"}, never change ${many ? "them" : "it"}.</div>
+    ${mutating ? `<div class="tr-warn">⚠ One of these <b>changes things</b> — it will need <b>Mutations armed</b> before the AI can run it.</div>` : ""}
+    <pre class="tr-json">${esc(JSON.stringify(many ? manifests : manifests[0], null, 2))}</pre>
+    <div class="tr-bar">
+      <button class="modal-btn tr-add" type="button">＋ Add ${many ? "all" : "tool"} &amp; enable</button>
+      <button class="btn ghost tr-edit" type="button">Edit in Tools</button>
+      <span class="tr-msg set-msg"></span>
+    </div>`;
+  const msg = card.querySelector(".tr-msg");
+  card.querySelector(".tr-add").onclick = async (e) => {
+    const btn = e.currentTarget; btn.disabled = true; msg.textContent = "Adding…"; msg.className = "tr-msg set-msg";
+    try {
+      await loadTools();                                    // refresh the live list first
+      const names = new Set(manifests.map((t) => t && t.name));
+      await saveTools([...toolsState.filter((t) => !names.has(t.name)), ...manifests]); // server validates
+      msg.className = "tr-msg set-msg good"; btn.textContent = "✓ Added";
+      // Offer a one-click re-run of the question that triggered the request.
+      if (question && !busy) {
+        msg.textContent = "✓ Added — ";
+        const rerun = document.createElement("button");
+        rerun.className = "btn ghost tr-rerun"; rerun.type = "button"; rerun.textContent = "Re-run my question";
+        rerun.onclick = () => { input.value = question; send(); };
+        msg.appendChild(rerun);
+      } else {
+        msg.textContent = `✓ Added — ask me again and I'll use ${many ? "them" : "it"}`;
+      }
+    } catch (err) {
+      msg.textContent = err.message; msg.className = "tr-msg set-msg bad"; btn.disabled = false;
+    }
+  };
+  card.querySelector(".tr-edit").onclick = () => { showView("tools"); openToolForm(manifests[0]); };
+  body.appendChild(card); scroll();
+}
+
 // ─── Mindy, the mascot ───────────────────────────────────────────────────────────
 // The same daemon from the landing page, inlined so the chat has a face. One smooth
 // silhouette + a glow "mind" within; bobs & blinks when idle, tilts & sparks when
@@ -421,7 +491,14 @@ async function send() {
   } finally {
     setThinking(body, false);
     if (textSpan) textSpan.classList.remove("cursor");
-    if (acc.trim()) history.push({ role: "assistant", content: acc });
+    if (acc.trim()) {
+      history.push({ role: "assistant", content: acc });
+      const { clean, manifests } = extractToolBlocks(acc);     // turn tool-request blocks into a card
+      if (manifests.length) {
+        if (textSpan) textSpan.innerHTML = renderMarkdown(clean);
+        addToolRequestCard(body, manifests, text);
+      }
+    }
     abortCtrl = null; setBusy(false); scroll(); loadStatus();
   }
   function handleEvent(chunk) {
@@ -480,6 +557,25 @@ function setGroups() {
 }
 if (SET.EmailMethod) SET.EmailMethod.onchange = setGroups;
 if (SET.AiBackend) SET.AiBackend.onchange = setGroups;
+
+// Provider presets — fill the base URL (and a sample model) for common OpenAI-
+// compatible APIs. "Custom…" leaves the fields alone.
+const AI_PRESETS = {
+  grok:       { url: "https://api.x.ai/v1",                  model: "grok-4" },
+  groq:       { url: "https://api.groq.com/openai/v1",       model: "llama-3.3-70b-versatile" },
+  openai:     { url: "https://api.openai.com/v1",            model: "gpt-4o" },
+  gemini:     { url: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash" },
+  openrouter: { url: "https://openrouter.ai/api/v1",         model: "anthropic/claude-3.5-sonnet" },
+  deepseek:   { url: "https://api.deepseek.com/v1",          model: "deepseek-chat" },
+  together:   { url: "https://api.together.xyz/v1",          model: "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
+  ollama:     { url: "http://127.0.0.1:11434/v1",            model: "llama3.1" },
+};
+if ($("#setAiPreset")) $("#setAiPreset").onchange = (e) => {
+  const p = AI_PRESETS[e.target.value];
+  if (!p) return;
+  SET.AiBaseUrl.value = p.url;
+  if (!SET.AiModel.value.trim()) SET.AiModel.value = p.model; // don't clobber a model the user already set
+};
 
 async function loadSettings() {
   setMsg("");
@@ -577,6 +673,7 @@ function renderTools() {
 
 function toolCard(t) {
   const detail = t.kind === "command" ? esc(t.argv.join(" "))
+    : t.kind === "command_console" ? `${esc(t.argv.join(" "))} <span class="ct-kind">+ AI args</span>`
     : t.kind === "db_query" ? `${esc(t.engine)} · ${esc(t.query)}`
     : t.kind === "db_console" ? `${esc(t.engine)} · AI-written SELECT (read-only)`
     : t.kind === "http_check" ? esc(t.url)
@@ -598,14 +695,18 @@ function toolCard(t) {
 function openToolForm(tool) {
   const isDb = tool && (tool.kind === "db_query" || tool.kind === "db_console");
   editingName = tool ? tool.name : null;
+  const jf = $("#toolJsonForm"); if (jf) jf.classList.add("hidden"); // don't show both editors at once
   $("#toolForm").classList.remove("hidden");
   $("#tfName").value = tool?.name || "";
   $("#tfName").disabled = !!tool;               // name is the key — don't rename in place
   $("#tfDesc").value = tool?.description || "";
   $("#tfKind").value = tool?.kind || "command";
-  $("#tfArgv").value = tool?.kind === "command" ? tool.argv.join("\n") : "";
+  const isCmd = tool && (tool.kind === "command" || tool.kind === "command_console");
+  $("#tfArgv").value = isCmd ? tool.argv.join("\n") : "";
   $("#tfMutating").checked = tool?.kind === "command" ? !!tool.mutating : false;
-  $("#tfTimeout").value = tool?.kind === "command" ? (tool.timeoutMs || "") : "";
+  $("#tfTimeout").value = isCmd ? (tool.timeoutMs || "") : "";
+  $("#tfArgPattern").value = tool?.kind === "command_console" ? (tool.argPattern || "") : "";
+  $("#tfMaxArgs").value = tool?.kind === "command_console" ? (tool.maxArgs || "") : "";
   $("#tfEngine").value = isDb ? tool.engine : "mysql";
   $("#tfDbHost").value = isDb ? tool.conn.host : "";
   $("#tfDbPort").value = isDb ? tool.conn.port : "";
@@ -631,6 +732,13 @@ function buildManifest() {
   const base = { kind, name: $("#tfName").value.trim(), description: $("#tfDesc").value.trim() };
   if (kind === "command") {
     const m = { ...base, argv: $("#tfArgv").value.split("\n").map((s) => s.trim()).filter(Boolean), mutating: $("#tfMutating").checked };
+    const t = $("#tfTimeout").value.trim(); if (t) m.timeoutMs = Number(t);
+    return m;
+  }
+  if (kind === "command_console") {
+    const m = { ...base, argv: $("#tfArgv").value.split("\n").map((s) => s.trim()).filter(Boolean) };
+    const p = $("#tfArgPattern").value.trim(); if (p) m.argPattern = p;
+    const mx = $("#tfMaxArgs").value.trim(); if (mx) m.maxArgs = Number(mx);
     const t = $("#tfTimeout").value.trim(); if (t) m.timeoutMs = Number(t);
     return m;
   }
@@ -682,6 +790,34 @@ if ($("#tfTest")) $("#tfTest").onclick = async () => {
     tfMsg((d.ok ? "✓ " : "✗ ") + (d.output || "(no output)").slice(0, 300), !d.ok);
   } catch (e) { tfMsg(e.message, true); }
 };
+// ── paste-JSON panel: add one tool object or an array, same shape the AI emits ──
+function tjMsg(t, bad) { const m = $("#tjMsg"); if (!m) return; m.textContent = t || ""; m.classList.toggle("bad", !!bad); m.classList.toggle("good", !!t && !bad); }
+function parseJsonTools() {
+  const raw = ($("#tjJson").value || "").trim();
+  if (!raw) throw new Error("paste a tool manifest first");
+  let parsed; try { parsed = JSON.parse(raw); } catch (e) { throw new Error("invalid JSON: " + e.message); }
+  const arr = Array.isArray(parsed) ? parsed : [parsed];
+  if (!arr.length) throw new Error("no tools found in the JSON");
+  return arr;
+}
+if ($("#pasteJsonBtn")) $("#pasteJsonBtn").onclick = () => {
+  closeToolForm();
+  $("#toolJsonForm").classList.remove("hidden");
+  $("#tjJson").value = ""; tjMsg("");
+  $("#toolJsonForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+if ($("#tjCancel")) $("#tjCancel").onclick = () => $("#toolJsonForm").classList.add("hidden");
+if ($("#tjAdd")) $("#tjAdd").onclick = async () => {
+  const b = $("#tjAdd"); b.disabled = true; tjMsg("Adding…");
+  try {
+    const tools = parseJsonTools();
+    const names = new Set(tools.map((t) => t && t.name));
+    await saveTools([...toolsState.filter((t) => !names.has(t.name)), ...tools]); // server validates the shape
+    renderTools(); $("#toolJsonForm").classList.add("hidden");
+  } catch (e) { tjMsg(e.message, true); }
+  b.disabled = false;
+};
+
 if ($("#toolList")) $("#toolList").addEventListener("click", async (e) => {
   const ed = e.target.closest(".ct-edit");
   if (ed) { const t = toolsState.find((x) => x.name === ed.dataset.name); if (t) openToolForm(t); return; }

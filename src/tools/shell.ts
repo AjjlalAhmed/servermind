@@ -26,6 +26,18 @@ const PROC_ALLOWED = new Set([
 
 type ArgValidator = (args: string[]) => string | null; // returns error message or null if ok
 
+// ── shared shapes for the network/mail diagnostics below ──────────────────────
+// DNS record types we permit. Zone transfers (axfr/ixfr) are deliberately absent.
+const DNS_RECORD_TYPES = new Set([
+  "a", "aaaa", "mx", "txt", "ns", "cname", "soa", "ptr", "srv", "caa",
+  "any", "spf", "naptr", "ds", "dnskey", "tlsa", "https", "svcb",
+]);
+const isRecordType = (s: string) => DNS_RECORD_TYPES.has(s.toLowerCase());
+// A DNS name / label (also matches reverse-lookup names like 1.0.0.127.in-addr.arpa).
+const HOSTISH = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,253}[a-zA-Z0-9])?$/;
+// An IPv4/IPv6 literal (no shell metachars — FORBIDDEN already blocks those).
+const IPISH = /^[0-9a-fA-F:.]+$/;
+
 // Each allowed command maps to: how to invoke it and how to validate args.
 const POLICY: Record<string, ArgValidator> = {
   df: onlyFlags(["-h", "-H", "-T", "-i", "--total"]),
@@ -98,7 +110,121 @@ const POLICY: Record<string, ArgValidator> = {
     if (!hasUnit) return "journalctl requires -u <managed-unit> (whole-journal reads are not permitted)";
     return null;
   },
+
+  // ── read-only network / mail diagnostics ──────────────────────────────────
+  // These reach DNS or read mail config/queues but cannot mutate anything. Each
+  // validates every token so no flag can turn a lookup into an edit or a dump.
+
+  // dig: a lookup of a name (or -x <ip>), optional record type, @resolver, and a
+  // safe subset of +options. No -f (batch file), no zone transfers.
+  dig: (args) => {
+    const plus = new Set([
+      "+short", "+noall", "+answer", "+nocomments", "+nocmd", "+nostats",
+      "+tcp", "+vc", "+trace", "+nssearch", "+identify",
+    ]);
+    let sawName = false;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i]!;
+      // axfr/ixfr look like hostnames to our regex but dig reads them as a
+      // zone-transfer TYPE — reject them outright wherever they appear.
+      const low = a.toLowerCase();
+      if (low === "axfr" || low === "ixfr" || low.startsWith("ixfr=")) {
+        return `dig: zone transfers are not allowed: ${a}`;
+      }
+      if (a.startsWith("+")) {
+        if (plus.has(a) || /^\+(time|tries|retry|ndots)=\d{1,3}$/.test(a)) continue;
+        return `dig: option not allowed: ${a}`;
+      }
+      if (a.startsWith("@")) {
+        const r = a.slice(1);
+        if (!HOSTISH.test(r) && !IPISH.test(r)) return `dig: invalid resolver: ${a}`;
+        continue;
+      }
+      if (a === "-t") { const t = args[++i]; if (!t || !isRecordType(t)) return "dig: -t needs a record type"; continue; }
+      if (a === "-x") { const ip = args[++i]; if (!ip || !IPISH.test(ip)) return "dig: -x needs an IP"; sawName = true; continue; }
+      if (a.startsWith("-")) return `dig: flag not allowed: ${a}`;
+      if (isRecordType(a)) continue;
+      if (HOSTISH.test(a)) { sawName = true; continue; }
+      return `dig: argument not allowed: ${a}`;
+    }
+    if (!sawName) return "dig: a hostname (or -x <ip>) is required";
+    return null;
+  },
+
+  // host: name or IP, optional -t <type>, read-only flags only.
+  host: (args) => {
+    let sawName = false;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i]!;
+      if (a === "-t") { const t = args[++i]; if (!t || !isRecordType(t)) return "host: -t needs a record type"; continue; }
+      if (a === "-W" || a === "-R") { const n = args[++i]; if (!n || !/^\d{1,3}$/.test(n)) return `host: ${a} needs a number`; continue; }
+      if (["-a", "-v", "-4", "-6", "-C", "-T", "-s"].includes(a)) continue;
+      if (a.startsWith("-")) return `host: flag not allowed: ${a}`;
+      if (HOSTISH.test(a) || IPISH.test(a)) { sawName = true; continue; }
+      return `host: argument not allowed: ${a}`;
+    }
+    if (!sawName) return "host: a hostname or IP is required";
+    return null;
+  },
+
+  // nslookup: name/IP plus an optional resolver and -type=/-debug.
+  nslookup: (args) => {
+    let sawName = false;
+    for (const a of args) {
+      if (/^-(type|querytype|q)=/.test(a)) {
+        const t = a.split("=")[1] ?? "";
+        if (!isRecordType(t)) return `nslookup: invalid type: ${a}`;
+        continue;
+      }
+      if (a === "-debug" || a === "-nodebug") continue;
+      if (a.startsWith("-")) return `nslookup: flag not allowed: ${a}`;
+      if (HOSTISH.test(a) || IPISH.test(a)) { sawName = true; continue; }
+      return `nslookup: argument not allowed: ${a}`;
+    }
+    if (!sawName) return "nslookup: a hostname or IP is required";
+    return null;
+  },
+
+  // postconf: read-only introspection ONLY. -e (edit), -M/-P, and -c (alt config
+  // dir) are blocked; bare args must be parameter names, never file paths.
+  postconf: (args) => {
+    for (const a of args) {
+      if (["-e", "-#", "-X", "-c", "-M", "-P", "-F"].includes(a)) {
+        return `postconf: ${a} is not permitted (read-only introspection only)`;
+      }
+      if (["-n", "-d", "-h", "-x", "-p", "-v"].includes(a)) continue;
+      if (a.startsWith("-")) return `postconf: flag not allowed (use -n/-d/-h/-x or parameter names): ${a}`;
+      if (!/^[a-z0-9_]{1,64}$/i.test(a)) return `postconf: invalid parameter name: ${a}`;
+    }
+    return null;
+  },
+
+  // postqueue / mailq: print the mail queue, never flush or delete it.
+  postqueue: (args) => {
+    if (args.length === 0) return "postqueue requires -p (print) or -j (json)";
+    for (const a of args) if (a !== "-p" && a !== "-j") return `postqueue: only -p and -j are allowed: ${a}`;
+    return null;
+  },
+  mailq: onlyFlags([]),
+
+  // getent: network databases only — passwd/shadow/group are blocked so the AI
+  // can't enumerate users.
+  getent: (args) => {
+    const dbs = new Set(["hosts", "ahosts", "ahostsv4", "ahostsv6", "networks", "services", "protocols"]);
+    if (args.length === 0 || !dbs.has(args[0]!)) return `getent: allowed databases: ${[...dbs].join(", ")}`;
+    for (let i = 1; i < args.length; i++) {
+      const a = args[i]!;
+      if (a.startsWith("-")) return `getent: flags not allowed: ${a}`;
+      if (!HOSTISH.test(a) && !IPISH.test(a) && !/^[a-z0-9_./-]{1,128}$/i.test(a)) return `getent: invalid key: ${a}`;
+    }
+    return null;
+  },
 };
+
+// The base commands run_shell accepts. Exported so the AI's system prompt can
+// advertise its own sandbox up front — otherwise the model guesses at commands
+// (dig, postconf, mail…), eats a string of REJECTED errors, and looks broken.
+export const ALLOWED_SHELL_COMMANDS = Object.keys(POLICY);
 
 function onlyFlags(allowed: string[]): ArgValidator {
   const set = new Set(allowed);
@@ -150,30 +276,28 @@ export interface ShellOutcome extends ExecResult {
   rejected?: string;
 }
 
-export async function runShell(command: string): Promise<ShellOutcome> {
+// Pure validation — no execution. Returns the argv to run, or a rejection reason.
+// Split out from runShell so tests can assert the allowlist hermetically (no
+// shelling out) and so callers can pre-check a command.
+export function validateShell(command: string): { argv: string[] } | { rejected: string } {
   const trimmed = command.trim();
 
-  if (!trimmed) {
-    return reject(command, "empty command");
-  }
+  if (!trimmed) return { rejected: "empty command" };
   if (FORBIDDEN.test(trimmed)) {
-    return reject(command, "command contains forbidden shell metacharacters (; & | ` $ > < \\ etc.)");
+    return { rejected: "command contains forbidden shell metacharacters (; & | ` $ > < \\ etc.)" };
   }
 
   const tokens = trimmed.split(/\s+/);
-  let base = tokens[0]!;
+  const base = tokens[0]!;
 
   // tolerate a leading `sudo` only by rejecting it explicitly with a clear message
   if (base === "sudo") {
-    return reject(command, "sudo is not permitted via run_shell; use service_action for privileged actions");
+    return { rejected: "sudo is not permitted via run_shell; use service_action for privileged actions" };
   }
 
   const validator = POLICY[base];
   if (!validator) {
-    return reject(
-      command,
-      `command not in allowlist: '${base}'. Allowed: ${Object.keys(POLICY).join(", ")}`,
-    );
+    return { rejected: `command not in allowlist: '${base}'. Allowed: ${Object.keys(POLICY).join(", ")}` };
   }
 
   let args = tokens.slice(1);
@@ -182,9 +306,15 @@ export async function runShell(command: string): Promise<ShellOutcome> {
   if (base === "tail") args = args.filter((a) => a !== "-f");
 
   const argErr = validator(args);
-  if (argErr) return reject(command, `${base}: ${argErr}`);
+  if (argErr) return { rejected: `${base}: ${argErr}` };
 
-  return exec([base, ...args], { timeoutMs: 12_000 });
+  return { argv: [base, ...args] };
+}
+
+export async function runShell(command: string): Promise<ShellOutcome> {
+  const v = validateShell(command);
+  if ("rejected" in v) return reject(command, v.rejected);
+  return exec(v.argv, { timeoutMs: 12_000 });
 }
 
 function reject(command: string, reason: string): ShellOutcome {

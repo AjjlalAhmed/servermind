@@ -23,12 +23,14 @@ export const TOOL_SPECS: ToolSpec[] = [
   {
     name: "run_shell",
     description:
-      "Run a single read-only diagnostic shell command from a strict allowlist " +
-      "(df, free, top -bn1, ss, ps, cat/head/tail of /var/log/* and /proc/*, " +
-      "uptime, uname, date, hostname, whoami, systemctl status/show/is-active, " +
-      "journalctl). No shell features (pipes, redirects, &&, $(), etc.) and no " +
-      "mutating commands are permitted. Use the dedicated tools for ports, logs, " +
-      "pm2 and services where they fit.",
+      "Run a single read-only diagnostic shell command from a strict allowlist: " +
+      "system stats (df, free, top -bn1, uptime, uname, date, hostname, whoami), " +
+      "process/network (ps, ss), log reads (cat/head/tail of /var/log/* and select " +
+      "/proc files), read-only systemctl (status/is-active/is-enabled/list-units) " +
+      "and journalctl (-u <managed unit>), and read-only network/mail diagnostics " +
+      "(dig, host, nslookup, postconf -n, postqueue/mailq, getent). No shell features " +
+      "(pipes, redirects, &&, $(), etc.) and no mutating commands are permitted. Use " +
+      "the dedicated tools for ports, logs, pm2 and services where they fit.",
     schema: { command: z.string().describe("Full command line, e.g. 'df -h' or 'systemctl status nginx'") },
   },
   {

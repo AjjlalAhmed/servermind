@@ -176,6 +176,17 @@
             <label class="set-field"><span>Backend</span><select class="field" id="setAiBackend"><option value="openai">OpenAI-compatible API</option><option value="claude-code">Claude Code (subscription)</option></select></label>
           </div>
           <div class="set-grid" id="setOpenaiGroup">
+            <label class="set-field"><span>Provider <span class="set-hint">fills the base URL for you</span></span><select class="field" id="setAiPreset">
+              <option value="">Custom…</option>
+              <option value="grok">xAI (Grok)</option>
+              <option value="groq">Groq</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="together">Together</option>
+              <option value="ollama">Ollama (local)</option>
+            </select></label>
             <label class="set-field"><span>Base URL</span><input class="field" id="setAiBaseUrl" placeholder="https://api.x.ai/v1" /></label>
             <label class="set-field"><span>Model</span><input class="field" id="setAiModel" placeholder="grok-3" /></label>
             <label class="set-field"><span>API key</span><input class="field" type="password" id="setAiApiKey" autocomplete="off" placeholder="••••••••" /></label>
@@ -199,6 +210,7 @@
 
         <div class="tools-head">
           <div class="section-title" id="toolsSummary">Your tools</div>
+          <button class="btn ghost" id="pasteJsonBtn" type="button">⟨⟩ Paste JSON</button>
           <button class="btn-add-server" id="addToolBtn" type="button">＋ Add tool</button>
         </div>
         <div id="toolList" class="tool-list"></div>
@@ -209,6 +221,7 @@
             <label class="set-field"><span>Name <span class="set-hint">a–z, 0–9, _ (3–40)</span></span><input class="field" id="tfName" placeholder="active_orders" autocomplete="off" /></label>
             <label class="set-field"><span>Type</span><select class="field" id="tfKind">
               <option value="command">Pinned command (A+)</option>
+              <option value="command_console">Command console (AI supplies args)</option>
               <option value="db_query">Read-only DB query (frozen)</option>
               <option value="db_console">DB console (AI writes the query)</option>
               <option value="http_check">HTTP health check</option>
@@ -217,13 +230,25 @@
           </div>
           <label class="set-field"><span>Description <span class="set-hint">what the AI sees — be specific</span></span><input class="field" id="tfDesc" placeholder="Count of active orders in the database" /></label>
 
-          <!-- command -->
+          <!-- command + command_console share the argv box -->
+          <div class="tf-group" data-kinds="command command_console">
+            <label class="set-field"><span>Command <span class="set-hint">one argument per line — frozen, run with no shell. For a console tool this is the binary + fixed prefix (e.g. dig / +short); the AI appends the rest.</span></span><textarea class="field mono" id="tfArgv" rows="3" placeholder="redis-cli&#10;INFO&#10;memory"></textarea></label>
+          </div>
+          <!-- command only: mutating switch -->
           <div class="tf-group" data-kinds="command">
-            <label class="set-field"><span>Command <span class="set-hint">one argument per line — frozen, run with no shell</span></span><textarea class="field mono" id="tfArgv" rows="3" placeholder="redis-cli&#10;INFO&#10;memory"></textarea></label>
+            <label class="set-toggle"><input type="checkbox" id="tfMutating" /> <span>This changes things (requires Mutations armed)</span></label>
+          </div>
+          <!-- command_console only: how the AI's args are constrained -->
+          <div class="tf-group hidden" data-kinds="command_console">
+            <p class="tf-note">The AI supplies the trailing argument(s) each call (e.g. a hostname). Every arg is validated against the pattern below, can never start with <code>-</code>, and runs with no shell. Read-only only.</p>
             <div class="set-grid">
-              <label class="set-toggle"><input type="checkbox" id="tfMutating" /> <span>This changes things (requires Mutations armed)</span></label>
-              <label class="set-field"><span>Timeout ms <span class="set-hint">1000–60000, blank = 15000</span></span><input class="field" id="tfTimeout" placeholder="15000" /></label>
+              <label class="set-field"><span>Arg pattern <span class="set-hint">regex each AI arg must match</span></span><input class="field mono" id="tfArgPattern" placeholder="^[A-Za-z0-9_.:@/][A-Za-z0-9_.:@/-]{0,127}$" /></label>
+              <label class="set-field"><span>Max args <span class="set-hint">1–10, blank = 3</span></span><input class="field" id="tfMaxArgs" placeholder="3" /></label>
             </div>
+          </div>
+          <!-- timeout shared by command + command_console -->
+          <div class="tf-group" data-kinds="command command_console">
+            <label class="set-field"><span>Timeout ms <span class="set-hint">1000–60000, blank = 15000</span></span><input class="field" id="tfTimeout" placeholder="15000" /></label>
           </div>
 
           <!-- DB connection — shared by db_query (frozen) and db_console (AI writes SQL) -->
@@ -269,6 +294,19 @@
             <button class="btn ghost" id="tfTest" type="button">Test</button>
             <button class="btn ghost" id="tfCancel" type="button">Cancel</button>
             <span class="set-msg" id="tfMsg"></span>
+          </div>
+        </div>
+
+        <!-- paste a manifest (or array) as JSON — same shape the AI emits in chat -->
+        <div class="panel set-panel hidden" id="toolJsonForm">
+          <label class="set-field"><span>Paste manifest JSON <span class="set-hint">one tool object, or an array — the same shape ServerMind suggests in chat</span></span>
+            <textarea class="field mono" id="tjJson" rows="9" placeholder='[
+  { "kind": "command", "name": "dns_mx", "description": "MX records for the mail domain", "argv": ["dig", "+short", "mx", "example.com"] }
+]'></textarea></label>
+          <div class="set-bar">
+            <button class="modal-btn" id="tjAdd" type="button">Add tool(s)</button>
+            <button class="btn ghost" id="tjCancel" type="button">Cancel</button>
+            <span class="set-msg" id="tjMsg"></span>
           </div>
         </div>
       </div>

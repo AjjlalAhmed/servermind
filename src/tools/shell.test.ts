@@ -4,10 +4,13 @@
 // refused the input; `undefined` means it passed validation.
 
 import { test, expect, describe } from "bun:test";
-import { runShell } from "./shell.ts";
+import { validateShell } from "./shell.ts";
 
-const rejected = async (cmd: string) => (await runShell(cmd)).rejected;
-const accepted = async (cmd: string) => (await runShell(cmd)).rejected;
+// Hermetic: validate-only, never shells out. `rejected` returns the reason string
+// (truthy) when refused; `accepted` returns undefined when the command passes.
+const reason = (cmd: string) => { const v = validateShell(cmd); return "rejected" in v ? v.rejected : undefined; };
+const rejected = (cmd: string) => reason(cmd);
+const accepted = (cmd: string) => reason(cmd);
 
 describe("run_shell rejects shell metacharacters (injection)", () => {
   for (const cmd of [
@@ -90,5 +93,42 @@ describe("run_shell accepts safe read-only diagnostics", () => {
   }
   test("empty command is rejected", async () => {
     expect(await rejected("   ")).toBeTruthy();
+  });
+});
+
+describe("run_shell network/mail diagnostics: validation", () => {
+  test("dig accepts safe lookups", async () => {
+    expect(await accepted("dig +short mx example.com")).toBeUndefined();
+    expect(await accepted("dig example.com a")).toBeUndefined();
+    expect(await accepted("dig -x 8.8.8.8")).toBeUndefined();
+    expect(await accepted("dig @1.1.1.1 +short txt example.com")).toBeUndefined();
+  });
+  test("dig refuses zone transfers, batch files, and a missing name", async () => {
+    expect(await rejected("dig axfr example.com")).toBeTruthy();
+    expect(await rejected("dig -f /etc/passwd")).toBeTruthy();
+    expect(await rejected("dig +short")).toBeTruthy();
+  });
+  test("postconf is read-only — edits and alt config dir refused", async () => {
+    expect(await accepted("postconf -n")).toBeUndefined();
+    expect(await accepted("postconf mydestination virtual_alias_domains")).toBeUndefined();
+    expect(await rejected("postconf -e myhostname=evil")).toBeTruthy();
+    expect(await rejected("postconf -c /tmp/evil")).toBeTruthy();
+    expect(await rejected("postconf /etc/passwd")).toBeTruthy();
+  });
+  test("postqueue prints only — flush/delete refused", async () => {
+    expect(await accepted("postqueue -p")).toBeUndefined();
+    expect(await rejected("postqueue -f")).toBeTruthy();
+    expect(await rejected("postqueue")).toBeTruthy();
+  });
+  test("getent allows network DBs but not user enumeration", async () => {
+    expect(await accepted("getent hosts localhost")).toBeUndefined();
+    expect(await rejected("getent passwd")).toBeTruthy();
+    expect(await rejected("getent shadow root")).toBeTruthy();
+  });
+  test("host/nslookup accept names, refuse stray flags", async () => {
+    expect(await accepted("host -t mx example.com")).toBeUndefined();
+    expect(await accepted("nslookup -type=mx example.com")).toBeUndefined();
+    expect(await rejected("host -f batchfile")).toBeTruthy();
+    expect(await rejected("nslookup -type=axfr example.com")).toBeTruthy();
   });
 });

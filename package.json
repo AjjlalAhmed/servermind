@@ -11,6 +11,7 @@
     "agent": "bun run src/agent-main.ts",
     "setup": "bun run src/setup.ts",
     "setup-auth": "bun run src/setup-auth.ts",
+    "update": "bash update.sh",
     "uninstall": "bash uninstall.sh",
     "typecheck": "tsc --noEmit"
   },

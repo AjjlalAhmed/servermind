@@ -93,7 +93,24 @@ const command = z.object({
   timeoutMs: z.number().int().min(1000).max(60_000).optional(),
 });
 
-export const CustomToolSchema = z.discriminatedUnion("kind", [dbQuery, dbConsole, httpCheck, readFile, command]);
+// Like `command`, but the operator freezes only the BINARY + fixed prefix args
+// (e.g. ["dig","+short"]) and the AI supplies the trailing args at call time
+// (e.g. the domain to look up). The shell analogue of db_console: flexible
+// ("run dig against any host") without minting a new frozen tool per value. Each
+// AI-supplied arg is validated against `argPattern` AND can never start with `-`
+// (so it can't smuggle a flag), and runs with NO shell — so injection is
+// impossible. Always read-only: a parameterized command may not be mutating.
+const commandConsole = z.object({
+  kind: z.literal("command_console"),
+  name, description,
+  argv: z.array(z.string().min(1).max(256)).min(1).max(20), // frozen binary + prefix
+  argPattern: z.string().min(1).max(200).default("^[A-Za-z0-9_.:@/][A-Za-z0-9_.:@/-]{0,127}$"),
+  maxArgs: z.number().int().min(1).max(10).default(3),
+  mutating: z.literal(false).default(false),
+  timeoutMs: z.number().int().min(1000).max(60_000).optional(),
+});
+
+export const CustomToolSchema = z.discriminatedUnion("kind", [dbQuery, dbConsole, httpCheck, readFile, command, commandConsole]);
 export const CustomToolsSchema = z.array(CustomToolSchema).max(MAX_TOOLS);
 export type CustomTool = z.infer<typeof CustomToolSchema>;
 
@@ -141,6 +158,9 @@ function validateOne(t: CustomTool): string | null {
     case "read_file":
     case "command":
       return null;
+    case "command_console":
+      try { new RegExp(t.argPattern); } catch { return "argPattern is not a valid regular expression"; }
+      return null;
   }
 }
 
@@ -149,6 +169,7 @@ function validateOne(t: CustomTool): string | null {
 // it knows the arm rule, and tell db_console to supply a single SELECT.
 function describe(t: CustomTool): string {
   if (t.kind === "db_console") return `${t.description} (custom db_console — you provide one read-only ${t.engine} SELECT/SHOW/EXPLAIN; writes & multi-statements are blocked)`;
+  if (t.kind === "command_console") return `${t.description} (custom command_console — you provide up to ${t.maxArgs} argument(s) appended to \`${t.argv.join(" ")}\`; each must match ${t.argPattern} and cannot start with '-'; read-only)`;
   if (t.kind === "command" && t.mutating) return `${t.description} (custom command, MUTATING — requires arm)`;
   return `${t.description} (custom ${t.kind}, read-only)`;
 }
@@ -156,11 +177,15 @@ function describe(t: CustomTool): string {
 // The query parameter the AI fills for a db_console tool. Every other kind is
 // frozen and takes no model input.
 const QUERY_DESC = "A single read-only SQL statement (SELECT / SHOW / EXPLAIN), no semicolons or comments";
+const ARGS_DESC = "Arguments appended to the frozen command (e.g. a hostname). Each must match the tool's pattern and cannot be a flag.";
 
-// MCP form: ZodRawShape per tool. db_console accepts a `query`; the rest empty.
+// MCP form: ZodRawShape per tool. db_console accepts a `query`, command_console
+// an `args` array; the rest take no model input (empty schema).
 export function customToolSpecs(): ToolSpec[] {
   return TOOLS.map((t) => {
-    const schema: z.ZodRawShape = t.kind === "db_console" ? { query: z.string().describe(QUERY_DESC) } : {};
+    const schema: z.ZodRawShape = t.kind === "db_console" ? { query: z.string().describe(QUERY_DESC) }
+      : t.kind === "command_console" ? { args: z.array(z.string()).describe(ARGS_DESC) }
+      : {};
     return { name: t.name, description: describe(t), schema };
   });
 }
@@ -174,6 +199,8 @@ export function customToolOpenAI() {
       description: describe(t),
       parameters: t.kind === "db_console"
         ? { type: "object", properties: { query: { type: "string", description: QUERY_DESC } }, required: ["query"] }
+        : t.kind === "command_console"
+        ? { type: "object", properties: { args: { type: "array", items: { type: "string" }, description: ARGS_DESC } }, required: ["args"] }
         : { type: "object", properties: {}, required: [] },
     },
   }));
@@ -185,8 +212,8 @@ export function customToolMutating(n: string): boolean { return !!find(n)?.mutat
 // Lightweight metadata an agent advertises to the controller — names + the
 // model-facing description only, never the definition (command/query/conn).
 // `takesQuery` flags a db_console tool whose query the controller's AI fills.
-export function advertisedCustomTools(): { name: string; description: string; takesQuery: boolean }[] {
-  return TOOLS.map((t) => ({ name: t.name, description: describe(t), takesQuery: t.kind === "db_console" }));
+export function advertisedCustomTools(): { name: string; description: string; takesQuery: boolean; takesArgs: boolean }[] {
+  return TOOLS.map((t) => ({ name: t.name, description: describe(t), takesQuery: t.kind === "db_console", takesArgs: t.kind === "command_console" }));
 }
 
 // ── execution ─────────────────────────────────────────────────────────────────
@@ -210,7 +237,36 @@ export async function runCustomTool(t: CustomTool, input?: any): Promise<Dispatc
     case "http_check": return runHttpCheck(t);
     case "read_file": return runReadFile(t);
     case "command": return runCommand(t);
+    case "command_console": return runCommandConsole(t, input);
   }
+}
+
+// The AI supplies trailing args; we validate each against the operator's pattern
+// (and a hard no-leading-dash / no-shell-metachar rule) before appending them to
+// the frozen argv. exec() uses no shell, so args are passed as literal argv —
+// the only real risk is an arg the binary reads as a flag, which the pattern and
+// the dash check prevent.
+const ARG_METACHARS = /[;&|`$><\\!{}()\n\r#'" \t]|\.\./;
+async function runCommandConsole(t: Extract<CustomTool, { kind: "command_console" }>, input?: any): Promise<DispatchResult> {
+  const raw = input?.args;
+  const args: string[] = Array.isArray(raw) ? raw.map((a) => String(a)) : raw == null || raw === "" ? [] : [String(raw)];
+  if (args.length > t.maxArgs) return { content: `REJECTED: too many arguments (max ${t.maxArgs})`, isError: true };
+  let re: RegExp;
+  try { re = new RegExp(t.argPattern); } catch { return { content: "REJECTED: invalid argPattern", isError: true }; }
+  for (const a of args) {
+    if (!a) return { content: "REJECTED: empty argument", isError: true };
+    if (a.length > 256) return { content: "REJECTED: argument too long", isError: true };
+    if (a.startsWith("-")) return { content: `REJECTED: argument may not start with '-' (looks like a flag): ${a}`, isError: true };
+    if (ARG_METACHARS.test(a)) return { content: `REJECTED: argument contains a forbidden character: ${a}`, isError: true };
+    if (!re.test(a)) return { content: `REJECTED: argument "${a}" does not match the allowed pattern ${t.argPattern}`, isError: true };
+  }
+  const r = await exec([...t.argv, ...args], { timeoutMs: t.timeoutMs ?? 15_000 });
+  const parts: string[] = [];
+  if (r.timedOut) parts.push("[timed out]");
+  parts.push(`exit=${r.code}`);
+  if (r.stdout) parts.push(`stdout:\n${r.stdout}`);
+  if (r.stderr) parts.push(`stderr:\n${r.stderr}`);
+  return { content: parts.join("\n") || "(no output)", isError: !r.ok };
 }
 
 async function runDbConsole(t: Extract<CustomTool, { kind: "db_console" }>, input?: any): Promise<DispatchResult> {

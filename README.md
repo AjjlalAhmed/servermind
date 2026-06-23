@@ -136,6 +136,20 @@ proxy's own address.
 Auth (`SERVERMIND_PASSWORD_HASH`, `SERVERMIND_TOTP_SECRET`) is written by the
 wizard — never edit by hand. `.env` is gitignored and never leaves your server.
 
+## Updating
+
+Pull the latest code into an existing install and reload it — **no wizard, no reconfiguration**:
+
+```bash
+curl -fsSL https://servermind.dev/update.sh | bash
+```
+Or, from a cloned repo: `bun run update`. It fetches the latest code, runs
+`bun install`, and `pm2 reload`s the running process — auto-detecting whether
+this box is a controller (`servermind`) or a fleet agent (`servermind-agent`).
+Your `.env`, `data/` and `logs/` are gitignored, so they're never touched; local
+edits to tracked source files are reset to match the published code. Override the
+target with `SERVERMIND_DIR=/path` or `SERVERMIND_BRANCH=<ref>`.
+
 ## Uninstall
 
 ```bash

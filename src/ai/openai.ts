@@ -6,7 +6,8 @@
 // as the Claude Code backend, so the UI and routes don't care which is active.
 
 import { getAI } from "../settings.ts";
-import { isMutatingCall } from "../tools/index.ts";
+import { isMutatingCall, TOOL_SPECS, type ToolSpec } from "../tools/index.ts";
+import { zodShapeToJsonSchema } from "../tools/jsonschema.ts";
 import { customToolOpenAI } from "../tools/custom.ts";
 import { localAgent } from "../agent.ts";
 import { RemoteAgent } from "../fleet/remote.ts";
@@ -15,79 +16,14 @@ import { SYSTEM_PROMPT, type ChatMessage, type StreamEvent, type ChatOptions } f
 
 const MAX_TURNS = 10;
 
-// Tool definitions in OpenAI function-calling format (JSON Schema params).
-const TOOLS = [
-  {
-    type: "function",
-    function: {
-      name: "run_shell",
-      description:
-        "Run a single read-only diagnostic shell command from a strict allowlist (df, free, top -bn1, ss, ps, cat/head/tail of /var/log/* and /proc/*, uptime, uname, date, hostname, whoami, read-only systemctl/journalctl). No pipes/redirects/&&; no mutating commands.",
-      parameters: {
-        type: "object",
-        properties: { command: { type: "string", description: "Full command line, e.g. 'df -h'" } },
-        required: ["command"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "pm2_action",
-      description:
-        "Inspect or control PM2 processes. list/logs are free; restart/stop/start are MUTATING and require the user to arm mutations first. Omit name for list; name optional on restart (targets all).",
-      parameters: {
-        type: "object",
-        properties: {
-          action: { type: "string", enum: ["list", "restart", "stop", "start", "logs"] },
-          name: { type: "string", description: "PM2 process name (or 'all')" },
-        },
-        required: ["action"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "service_action",
-      description:
-        "Manage a systemd service. status is read-only; start/stop/restart/enable are MUTATING/privileged and require the user to arm mutations. Only managed units (nginx, caddy, mysql/mariadb, redis-server, docker, fail2ban).",
-      parameters: {
-        type: "object",
-        properties: {
-          service: { type: "string", description: "Unit name, e.g. 'nginx'" },
-          action: { type: "string", enum: ["status", "start", "stop", "restart", "enable"] },
-        },
-        required: ["service", "action"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "check_port",
-      description: "Check whether a TCP port is being listened on, and by which process.",
-      parameters: {
-        type: "object",
-        properties: { port: { type: "integer", minimum: 1, maximum: 65535 } },
-        required: ["port"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "read_log",
-      description:
-        "Tail the last N lines (default 100, max 1000) of a log file under /var/log/, /root/.pm2/logs/, or ~/.pm2/logs/.",
-      parameters: {
-        type: "object",
-        properties: { path: { type: "string" }, lines: { type: "integer", minimum: 1, maximum: 1000 } },
-        required: ["path"],
-      },
-    },
-  },
-];
+// OpenAI function-calling defs are DERIVED from the single TOOL_SPECS source
+// (Zod) the MCP/Claude backend also uses — so name, description, and params can
+// never drift between the two backends. Custom tools keep their own JSON-Schema
+// builder (customToolOpenAI) since they're defined as plain data, not Zod.
+function specToOpenAI(s: ToolSpec) {
+  return { type: "function", function: { name: s.name, description: s.description, parameters: zodShapeToJsonSchema(s.schema) } };
+}
+const TOOLS = TOOL_SPECS.map(specToOpenAI);
 
 function preview(s: string, n = 600): string {
   const t = (s ?? "").trim();

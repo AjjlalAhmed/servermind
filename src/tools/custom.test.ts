@@ -93,6 +93,50 @@ describe("db_console (AI writes the query)", () => {
   });
 });
 
+describe("command_console (AI supplies args to a frozen binary)", () => {
+  // echo as a safe frozen binary; the AI appends args.
+  const cc = (over: object = {}) => ({ kind: "command_console", name: "echo_args", description: "echo with args", argv: ["echo", "prefix"], ...over });
+
+  test("validates and is never mutating", () => {
+    expect(validateCustomTools([cc()]).ok).toBe(true);
+    register([cc()]);
+    expect(isMutatingCall("echo_args", { args: ["x"] })).toBe(false);
+  });
+
+  test("an invalid argPattern is rejected", () => {
+    expect(validateCustomTools([cc({ argPattern: "([" })]).ok).toBe(false);
+  });
+
+  test("a valid arg is appended and runs", async () => {
+    register([cc()]);
+    const r = await dispatchTool("echo_args", { args: ["hello"] }, { allowMutations: false });
+    expect(r.isError).toBe(false);
+    expect(r.content).toContain("prefix hello");
+  });
+
+  test("an arg that looks like a flag is refused", async () => {
+    register([cc()]);
+    const r = await dispatchTool("echo_args", { args: ["-rf"] }, { allowMutations: false });
+    expect(r.isError).toBe(true);
+    expect(r.content).toContain("REJECTED");
+  });
+
+  test("args with shell metacharacters or mismatching the pattern are refused", async () => {
+    register([cc()]);
+    expect((await dispatchTool("echo_args", { args: ["a; rm -rf /"] }, {})).isError).toBe(true);
+    expect((await dispatchTool("echo_args", { args: ["a b"] }, {})).isError).toBe(true);
+    register([cc({ argPattern: "^[0-9]+$" })]);
+    expect((await dispatchTool("echo_args", { args: ["notanumber"] }, {})).isError).toBe(true);
+  });
+
+  test("more args than maxArgs is refused", async () => {
+    register([cc({ maxArgs: 1 })]);
+    const r = await dispatchTool("echo_args", { args: ["a", "b"] }, {});
+    expect(r.isError).toBe(true);
+    expect(r.content).toContain("too many");
+  });
+});
+
 describe("execution", () => {
   test("a frozen command runs via exec and returns its output", async () => {
     register([cmd()]);
