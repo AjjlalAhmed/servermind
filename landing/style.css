@@ -254,13 +254,18 @@ h1 {
 .cta .lg { margin-top: 4px; }
 
 /* ─── footer ─── */
-.footer { border-top: 1px solid var(--border); padding: 32px 0; }
-.footer-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.footer { border-top: 1px solid var(--border); padding: 48px 0 36px; }
+.footer-inner { display: flex; flex-direction: column; gap: 28px; }
+.footer-top { display: flex; align-items: center; justify-content: space-between; gap: 24px 40px; flex-wrap: wrap; }
 .footer-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
-.footer-links { display: flex; gap: 22px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 14px 22px; }
 .footer-links a { font-size: 13.5px; color: var(--text-muted); transition: color .15s; }
 .footer-links a:hover { color: var(--text); }
-.footer-meta { margin-left: auto; font-size: 12.5px; color: var(--text-faint); }
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--border); }
+.footer-meta { font-size: 12.5px; color: var(--text-faint); }
+.footer-badge { display: inline-flex; opacity: .8; transition: opacity .15s; }
+.footer-badge:hover { opacity: 1; }
+.footer-badge img { display: block; width: 180px; height: auto; }
 
 /* ─── nav scroll state ─── */
 .nav.scrolled { border-bottom-color: var(--border-2); background: rgba(11,10,7,0.85); }
@@ -285,7 +290,7 @@ h1 {
   .mini-nav { flex-direction: row; margin-top: 0; }
   .mini-status { margin-top: 0; margin-left: auto; }
   .install-cmd { font-size: 12.5px; }
-  .footer-meta { margin-left: 0; width: 100%; }
+  .footer-bottom { flex-direction: column-reverse; align-items: flex-start; gap: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
