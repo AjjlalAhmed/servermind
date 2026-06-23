@@ -94,7 +94,10 @@
         "Optional self-hosted WireGuard mesh (--mesh) for the controller-to-agent link: no third-party coordination server, each agent's private key never leaves its box, per-agent keys are individually revocable",
         "Fleet-wide AI chat: ask one question across every server (e.g. which servers are unhealthy) and act on any of them",
         "Read-only command allowlist — no raw shell, command injection is structurally impossible",
+        "Deep read-only diagnostics with no SSH: DNS (dig/host), mail (Postfix config and queue), Redis queue depth, plus status and logs for any systemd unit — to trace a problem across the whole pipeline, not just the obvious component",
+        "Custom tools you define and freeze: a pinned command, a read-only DB query or console, or a parameterized command where the AI supplies only a validated argument; add them by form or pasted JSON, and the assistant proposes the exact tool to approve when it lacks one",
         "Server-side \"arm\" switch required before any restart, stop or start",
+        "One-command, no-reconfig updates (update.sh) for an existing install, controller or agent",
         "Password + TOTP two-factor authentication, brute-force lockout, strict CSP",
         "Bring your own AI: Google Gemini (free), Claude subscription, Groq, xAI Grok, OpenRouter, or local Ollama",
         "Access with no domain via SSH tunnel or Tailscale; optional HTTPS domain via Caddy or Nginx",
@@ -405,8 +408,8 @@
     <div class="container"><p class="strip-head reveal">Monitors &amp; manages your whole stack</p></div>
     <div class="marquee" aria-hidden="true">
       <div class="marquee-track">
-        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
-        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
+        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>Postfix</span><span>DNS</span><span>queues</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
+        <span>PM2</span><span>Redis</span><span>MySQL</span><span>MariaDB</span><span>Nginx</span><span>Caddy</span><span>systemd</span><span>Docker</span><span>fail2ban</span><span>Postfix</span><span>DNS</span><span>queues</span><span>disk</span><span>memory</span><span>ports</span><span>logs</span>
       </div>
     </div>
   </section>
@@ -424,8 +427,8 @@
       <div class="chapter reveal"><span class="chapter-no">01</span><span class="chapter-line"></span><span class="chapter-tag">The 2am test</span></div>
       <div class="story-inner">
         <div class="story-copy reveal">
-          <h2>A service goes down.<br />You don't even reach for SSH.</h2>
-          <p>The old way: log in, tail the logs, grep, guess, restart, hope. The ServerMind way — you ask, and it investigates across your tools and tells you exactly what broke.</p>
+          <h2>Something stops working.<br />You don't even reach for SSH.</h2>
+          <p>The old way: log in, tail the logs, grep, guess, restart, hope. The ServerMind way — you ask, and it traces the whole pipeline — services, logs, and the queues between them — to find the part that silently died, then tells you exactly what broke and how to fix it.</p>
         </div>
         <div class="story-chat reveal">
           <div class="sc-window">
@@ -499,11 +502,12 @@
         <article class="card feat-lg reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <h3>Chat your infrastructure</h3>
-          <p>Ask in plain English. It picks the right tools, runs them, and explains what it finds — no syntax to remember.</p>
+          <p>Ask in plain English. It picks the right tools, runs them, and explains what it finds — no syntax to remember. It traces the whole path, not just the obvious part: services, logs, DNS, mail, and the queues between them.</p>
           <div class="feat-asks">
             <span>Why is nginx down?</span>
+            <span>Why are jobs piling up?</span>
+            <span>Check the job queue depth</span>
             <span>Restart api-prod</span>
-            <span>How much disk is left?</span>
             <span>Tail the error log</span>
           </div>
         </article>
@@ -515,7 +519,7 @@
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.7-.7-2.5z"/></svg></span>
           <h3>Teach it your own tools</h3>
-          <p>Add tools from the dashboard — a frozen command, a read-only database query, or a "DB console" the AI writes <code>SELECT</code>s against. You define them, the AI only triggers them. <a href="docs.html#custom-tools">See how →</a></p>
+          <p>Add tools from the dashboard — a frozen command, a read-only DB query, a "DB console" it writes <code>SELECT</code>s against, or a parameterized command where it fills in just the argument. Paste one as JSON, and when it hits its limits it hands you the exact tool to approve in one click. You define them, the AI only triggers them. <a href="docs.html#custom-tools">See how →</a></p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
@@ -525,12 +529,12 @@
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
           <h3>Safe by design</h3>
-          <p>A read-only command whitelist, no raw shell, and an “arm” switch required before <em>any</em> change touches your box.</p>
+          <p>Broad <em>read-only</em> reach — services, logs, DNS, mail, queues — with no raw shell, and an “arm” switch required before <em>any</em> change touches your box.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
           <h3>Bring your own AI</h3>
-          <p>Free Gemini, a Claude subscription, or any OpenAI-compatible API — Groq, OpenRouter, even local Ollama. No lock-in.</p>
+          <p>Free Gemini, a Claude subscription, or any OpenAI-compatible API — xAI Grok, Groq, OpenRouter, DeepSeek, even local Ollama. No lock-in. The same tools and guardrails apply whichever you pick.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
@@ -540,7 +544,7 @@
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
           <h3>One command to run</h3>
-          <p><code>curl | bash</code>, then a wizard handles auth, your AI, and services. Open-source — fork it, audit it, own it.</p>
+          <p><code>curl | bash</code>, then a wizard handles auth, your AI, and services. Updates are one command too — no reconfig. Open-source — fork it, audit it, own it.</p>
         </article>
         <article class="card reveal">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="m22 7-10 5L2 7"/></svg></span>

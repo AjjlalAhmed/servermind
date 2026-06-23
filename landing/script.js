@@ -105,29 +105,29 @@ if (!RM) {
 
 /* ─── story: typed incident conversation ─── */
 const ANSWER_PLAIN =
-  "Found it — api-prod is OOM-killed. It restarted 14x in 2 minutes; memory hit the 300 MB cap. Last log line: JavaScript heap out of memory. Raise max_memory_restart, or fix the leak in the upload handler.";
+  "Found it — the API is fine. The worker that drains the job queue is dead: its systemd unit points at a path that no longer exists, so it's been failing silently for weeks. Thousands of jobs are stuck in Redis behind it with nothing processing them. Start it, put it under PM2 so it stays up, and the backlog clears.";
 const ANSWER_HTML =
-  "<b>Found it — api-prod is OOM-killed.</b> It restarted 14× in 2 minutes; memory hit the 300&nbsp;MB cap. Last log line: <code>JavaScript heap out of memory</code>. Raise <code>max_memory_restart</code>, or fix the leak in the upload handler.";
+  "<b>Found it — the API is fine.</b> The worker that drains the job queue is dead: its <code>systemd</code> unit points at a path that no longer exists, so it's been failing silently for weeks. Thousands of jobs are stuck in <code>Redis</code> behind it with nothing processing them. Start it, put it under <code>PM2</code> so it stays up, and the backlog clears.";
 
 function el(cls, html) { const d = document.createElement("div"); d.className = cls; if (html != null) d.innerHTML = html; return d; }
 
 async function runStory(box) {
   if (RM) {
     box.append(
-      el("sc-you", "api-prod is throwing 502s — what's wrong?"),
+      el("sc-you", "background jobs stopped running — what's wrong?"),
       el("sc-eyebrow", "ServerMind"),
-      el("sc-tools", `<span class="sc-tool"><b>pm2_action</b><span class="done">done</span></span><span class="sc-tool"><b>read_log</b><span class="done">done</span></span>`),
+      el("sc-tools", `<span class="sc-tool"><b>run_shell</b><span class="done">done</span></span><span class="sc-tool"><b>service_action</b><span class="done">done</span></span><span class="sc-tool"><b>read_log</b><span class="done">done</span></span>`),
       el("sc-ai", ANSWER_HTML),
     );
     return;
   }
-  box.append(el("sc-you", "api-prod is throwing 502s — what's wrong?"));
+  box.append(el("sc-you", "background jobs stopped running — what's wrong?"));
   await sleep(650);
   box.append(el("sc-eyebrow", "ServerMind"));
   const think = el("sc-think", "<i></i><i></i><i></i>");
   box.append(think); await sleep(950); think.remove();
   const tools = el("sc-tools", ""); box.append(tools);
-  for (const t of ["pm2_action", "read_log"]) {
+  for (const t of ["run_shell", "service_action", "read_log"]) {
     const chip = el("sc-tool", `<b>${t}</b><span class="done" style="opacity:0">done</span>`);
     tools.append(chip); await sleep(520);
     chip.querySelector(".done").style.opacity = "1";
@@ -206,10 +206,11 @@ if (!GSAP) {
 
   // the talk-to-it demo — real questions, real-shaped answers
   const demos = [
-    ["restart pm2 api",   '<span class="ok">✓</span> api restarted · 0s downtime'],
-    ["why is redis slow?", '<span class="ok">✓</span> evicting keys — maxmemory at 94%, raised to 1&nbsp;GB'],
-    ["free up disk",       '<span class="ok">✓</span> cleared 2.3&nbsp;GB of logs &amp; apt cache'],
-    ["is mysql healthy?",  '<span class="ok">✓</span> up 14d · 38 conns · slow-query log clean'],
+    ["restart pm2 api",        '<span class="ok">✓</span> api restarted · 0s downtime'],
+    ["why are jobs piling up?", '<span class="ok">✓</span> queue worker was down — 12k jobs backed up · restarted, draining'],
+    ["why is redis slow?",     '<span class="ok">✓</span> evicting keys — maxmemory at 94%, raised to 1&nbsp;GB'],
+    ["free up disk",           '<span class="ok">✓</span> cleared 2.3&nbsp;GB of logs &amp; apt cache'],
+    ["is mysql healthy?",      '<span class="ok">✓</span> up 14d · 38 conns · slow-query log clean'],
   ];
   const think = (on) => mindy.classList.toggle("is-thinking", on);
   function type(t, done) {
