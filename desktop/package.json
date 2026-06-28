@@ -15,11 +15,11 @@
     "ssh2": "^1.16.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.0.1",
     "@types/ssh2": "^1.15.1",
-    "electron": "^33.2.0",
-    "electron-builder": "^25.1.8",
-    "typescript": "^5.7.2"
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^6.0.3"
   },
   "build": {
     "appId": "dev.servermind.desktop",
