@@ -167,7 +167,56 @@ async function loadStatus() {
     lastStatus = await r.json();
     renderDashboard(lastStatus);
   } catch (e) { /* keep last */ }
+  loadProfile(); // Server Memory panel (cached read; cheap)
 }
+
+// ─── Server Memory panel ───────────────────────────────────────────────────────
+function relTime(iso) {
+  const t = Date.parse(iso); if (!t) return "—";
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.round(s / 60) + "m ago";
+  if (s < 86400) return Math.round(s / 3600) + "h ago";
+  return Math.round(s / 86400) + "d ago";
+}
+async function loadProfile(refresh) {
+  const body = $("#profileBody"); if (!body) return;
+  try {
+    const r = await fetch("/profile" + (refresh ? "?refresh=1" : ""));
+    if (!r.ok) return;
+    const { profile } = await r.json();
+    renderProfile(profile);
+  } catch { /* keep last */ }
+}
+function renderProfile(p) {
+  const body = $("#profileBody"); if (!body) return;
+  if (!p) { body.innerHTML = `<div class="profile-empty">No profile yet — click <b>Rescan</b>.</div>`; return; }
+  const row = (label, val) => `<div class="prow"><span class="pk">${label}</span><span class="pv">${val}</span></div>`;
+  const svc = Object.entries(p.services?.monitored || {}).map(([u, s]) =>
+    `<span class="ptag ${s === "active" ? "ok" : "warn"}">${esc(u)} ${esc(s)}</span>`).join(" ") || `<span class="pmuted">none configured</span>`;
+  const failed = (p.services?.failed || []).length
+    ? `<div class="prow"><span class="pk">Failed units</span><span class="pv">${p.services.failed.map((f) => `<span class="ptag bad">${esc(f)}</span>`).join(" ")}</span></div>` : "";
+  const ports = (p.ports || []).map((x) => `<span class="ptag">${x.port}${x.proc ? `<span class="pmuted">·${esc(x.proc)}</span>` : ""}</span>`).join(" ") || `<span class="pmuted">none seen</span>`;
+  const pm2 = (p.pm2 || []).length ? p.pm2.map((n) => `<span class="ptag">${esc(n)}</span>`).join(" ") : `<span class="pmuted">none</span>`;
+  const tools = (p.customTools || []).length ? p.customTools.map((n) => `<span class="ptag">${esc(n)}</span>`).join(" ") : `<span class="pmuted">none</span>`;
+  const ds = `redis <b class="${/ok|up/i.test(p.datastores?.redis) ? "dok" : "dbad"}">${esc(p.datastores?.redis || "n/a")}</b> · mysql <b class="${/ok|up/i.test(p.datastores?.mysql) ? "dok" : "dbad"}">${esc(p.datastores?.mysql || "n/a")}</b>`;
+  const notes = (p.notes || []).length
+    ? `<div class="profile-notes">${p.notes.map((n) => `<div class="pnote">⚠ ${esc(n)}</div>`).join("")}</div>` : "";
+  body.innerHTML =
+    `<div class="profile-meta">scanned ${relTime(p.updatedAt)} · ${esc(p.host?.hostname || "")} · up ${esc(p.host?.uptime || "—")} · ${p.host?.cores ?? "?"} cores</div>` +
+    row("Resources", `mem ${p.resources?.memUsedPct}% of ${esc(p.resources?.memTotal || "?")} · disk ${p.resources?.diskUsedPct}% · swap ${esc(p.resources?.swap || "?")}`) +
+    row("Services", svc) + failed +
+    row("PM2", pm2) +
+    row("Listening", ports) +
+    row("Datastores", ds) +
+    row("Custom tools", tools) +
+    notes;
+}
+if ($("#profileRefresh")) $("#profileRefresh").onclick = async (e) => {
+  const b = e.currentTarget; b.disabled = true; const t = b.textContent; b.textContent = "↻ Scanning…";
+  await loadProfile(true);
+  b.disabled = false; b.textContent = t;
+};
 
 function renderDashboard(s) {
   const m = s.metrics || {};

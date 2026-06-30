@@ -15,7 +15,15 @@ import { getAI } from "./settings.ts";
 import { isMutatingCall } from "./tools/index.ts";
 import { customToolSpecs } from "./tools/custom.ts";
 import { ALLOWED_SHELL_COMMANDS } from "./tools/shell.ts";
+import { getServerProfileBlock } from "./notify/profile.ts";
 import { armedUntilMs } from "./arm.ts";
+
+// The Server Memory block, appended to the system prompt when a scan has run.
+// Empty before the first profile exists, so the prompt is otherwise unchanged.
+export function profileSuffix(): string {
+  const b = getServerProfileBlock();
+  return b ? `\n\n${b}` : "";
+}
 
 const ROOT = new URL("..", import.meta.url).pathname; // project root
 const MCP_SERVER = new URL("./mcp-server.ts", import.meta.url).pathname;
@@ -178,7 +186,7 @@ export async function runChat(
     "--verbose",
     "--include-partial-messages",
     "--model", getAI().claudeModel,
-    "--append-system-prompt", SYSTEM_PROMPT,
+    "--append-system-prompt", SYSTEM_PROMPT + profileSuffix(),
     "--mcp-config", mcpConfig,
     "--allowedTools", allowedTools(),
     "--disallowedTools", DISALLOWED_BUILTINS,

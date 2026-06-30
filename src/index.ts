@@ -14,6 +14,7 @@ import { verifyLogin } from "./auth/login.ts";
 import { createSession, destroySession, isValidSession } from "./auth/session.ts";
 import { localAgent, type Agent } from "./agent.ts";
 import { startWatcher } from "./notify/watcher.ts";
+import { startProfileRefresh, refreshProfile, getServerProfile } from "./notify/profile.ts";
 import { startFleetHub, fleetEnabled, fleetRegistry, fleetWebSocket, isAgentConnected, removeAgent, fleetTokenOk } from "./fleet/hub.ts";
 import { RemoteAgent, isAgentArmed } from "./fleet/remote.ts";
 import { MeshController } from "./fleet/mesh-controller.ts";
@@ -166,6 +167,7 @@ app.post("/auth/logout", (c) => {
 // ─── Authenticated API ─────────────────────────────────────────────────────────
 // Rate-limit runs before auth so unauthenticated probes are throttled too.
 app.use("/status", rateLimit({ limit: 60, windowMs: 60_000 }), requireAuth);
+app.use("/profile", rateLimit({ limit: 60, windowMs: 60_000 }), requireAuth);
 app.use("/chat", rateLimit({ limit: 20, windowMs: 60_000 }), requireAuth);
 
 app.get("/status", async (c) => {
@@ -175,6 +177,18 @@ app.get("/status", async (c) => {
   } catch (e) {
     console.error("[status] error:", (e as Error).message); // detail to logs, not the client
     return c.json({ error: "failed to collect status" }, 500);
+  }
+});
+
+// The Server Memory profile (cached; what the assistant sees). ?refresh=1 forces
+// a fresh scan instead of returning the cached one.
+app.get("/profile", async (c) => {
+  try {
+    if (c.req.query("refresh")) await refreshProfile();
+    return c.json({ profile: getServerProfile() });
+  } catch (e) {
+    console.error("[profile] error:", (e as Error).message);
+    return c.json({ error: "failed to read profile" }, 500);
   }
 });
 
@@ -421,4 +435,7 @@ if (fleetHub) console.log("  Fleet: controller hub ON — agents may connect wit
 
 // Start the background email watcher (no-op unless email is configured).
 startWatcher();
+// Start the self-refreshing Server Memory (scans the box on a slow schedule and
+// feeds a short profile into the assistant's system prompt).
+startProfileRefresh();
 console.log("");
