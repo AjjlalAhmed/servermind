@@ -94,6 +94,25 @@ button { font-family: inherit; }
 .profile-notes { margin: 8px 12px 4px; display: flex; flex-direction: column; gap: 4px; }
 .pnote { font-size: 12px; color: var(--amber); }
 
+/* ─── Fleet Memory matrix (see all at once) ─────────────────────────────── */
+.fm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fm-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 500; }
+.fm-table th.r, .fm-table td.r { text-align: right; }
+.fm-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+.fm-table td.mono { font-family: var(--font-mono); font-size: 12px; }
+.fm-table tr:last-child td { border-bottom: none; }
+.fm-row { cursor: pointer; transition: background 120ms ease; }
+.fm-row:hover { background: var(--surface-elev); }
+.fm-row.sel { background: var(--accent-soft); }
+.fm-row td.ok { color: var(--green); } .fm-row td.warn { color: var(--amber); } .fm-row td.bad { color: var(--red); }
+.fm-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; background: var(--text-faint); vertical-align: middle; }
+.fm-dot.ok { background: var(--green); } .fm-dot.off { background: var(--red); } .fm-dot.self { background: var(--accent); }
+.fm-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin-left: 4px; }
+.fm-bad { color: var(--red); font-weight: 600; }
+.fm-detail { margin-top: 4px; }
+.fm-detail:empty { display: none; }
+.fm-detail-title { padding: 12px 12px 4px; font-weight: 600; color: var(--accent); border-top: 1px solid var(--border); }
+
 /* ─── shell ─────────────────────────────────────────────────────────────── */
 .app { display: flex; height: 100dvh; }
 
@@ -198,7 +217,7 @@ button { font-family: inherit; }
 
 /* ─── overview ──────────────────────────────────────────────────────────── */
 [data-view] { flex: 1 1 auto; min-height: 0; }
-[data-view="overview"], [data-view="settings"] { display: block; overflow-y: auto; }
+[data-view="overview"], [data-view="settings"], [data-view="fleet"], [data-view="tools"] { display: block; overflow-y: auto; }
 [data-view="assistant"] { display: flex; flex-direction: column; }
 
 .overview { padding: 20px 20px 40px; max-width: 1240px; }

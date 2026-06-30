@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import type { StatusSnapshot } from "../status.ts";
+import type { ServerProfile } from "../notify/profile.ts";
 
 // A custom tool the agent OWNS and is willing to expose. The agent advertises
 // only this metadata — never the tool's definition (command/query/connection).
@@ -44,9 +45,17 @@ const ResultSchema = z.object({
   isError: z.boolean(),
 });
 
+// The agent's Server Memory profile. Like status, it's produced by the agent and
+// treated as opaque JSON by the hub (stored + rendered, never executed).
+const ProfileSchema = z.object({
+  type: z.literal("profile"),
+  profile: z.unknown(),
+});
+
 export type AgentMessage =
   | { type: "hello"; data: Hello }
   | { type: "status"; snapshot: StatusSnapshot }
+  | { type: "profile"; profile: ServerProfile }
   | { type: "result"; reqId: string; content: string; isError: boolean };
 
 // Parse + validate a raw frame FROM an agent (hub side). Returns null on
@@ -62,6 +71,10 @@ export function parseAgentMessage(raw: string): AgentMessage | null {
   if (t === "status") {
     const p = StatusSchema.safeParse(obj);
     return p.success ? { type: "status", snapshot: p.data.snapshot as StatusSnapshot } : null;
+  }
+  if (t === "profile") {
+    const p = ProfileSchema.safeParse(obj);
+    return p.success ? { type: "profile", profile: p.data.profile as ServerProfile } : null;
   }
   if (t === "result") {
     const p = ResultSchema.safeParse(obj);
@@ -100,6 +113,7 @@ export function parseControllerMessage(raw: string): ControllerMessage | null {
 
 export const helloFrame = (h: Omit<Hello, "type">): string => JSON.stringify({ type: "hello", ...h });
 export const statusFrame = (snapshot: StatusSnapshot): string => JSON.stringify({ type: "status", snapshot });
+export const profileFrame = (profile: ServerProfile): string => JSON.stringify({ type: "profile", profile });
 export const resultFrame = (reqId: string, content: string, isError: boolean): string => JSON.stringify({ type: "result", reqId, content, isError });
 export const invokeFrame = (reqId: string, name: string, input: unknown): string => JSON.stringify({ type: "invoke", reqId, name, input });
 export const armFrame = (on: boolean): string => JSON.stringify({ type: "arm", on });

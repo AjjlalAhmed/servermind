@@ -6,6 +6,7 @@
 
 import { Database } from "bun:sqlite";
 import type { StatusSnapshot } from "../status.ts";
+import type { ServerProfile } from "../notify/profile.ts";
 import type { AdvertisedTool } from "./protocol.ts";
 
 const ONLINE_MS = 45_000; // an agent is "online" if seen within this window
@@ -16,11 +17,13 @@ export interface FleetServer {
   online: boolean;
   lastSeen: number; // epoch ms
   status: StatusSnapshot | null;
+  profile: ServerProfile | null;
 }
 
 export class FleetRegistry {
   private db: Database;
   private status = new Map<string, StatusSnapshot>();
+  private profile = new Map<string, ServerProfile>();
   private lastSeen = new Map<string, number>();
   // Custom tools each agent advertised at its last hello. In-memory only — the
   // agent re-sends them on every reconnect, so there's nothing to persist.
@@ -54,6 +57,15 @@ export class FleetRegistry {
     this.db.run("UPDATE servers SET last_seen=? WHERE id=?", [now, id]);
   }
 
+  // The agent's Server Memory profile (failed units, ports, notes…). In-memory
+  // only — agents re-push it periodically, so there's nothing to persist.
+  setProfile(id: string, profile: ServerProfile): void {
+    this.profile.set(id, profile);
+  }
+  getProfile(id: string): ServerProfile | null {
+    return this.profile.get(id) ?? null;
+  }
+
   // The custom tools an agent advertised on its last hello.
   setTools(id: string, tools: AdvertisedTool[]): void {
     this.tools.set(id, tools);
@@ -66,7 +78,7 @@ export class FleetRegistry {
     const rows = this.db.query("SELECT id, hostname FROM servers ORDER BY hostname").all() as Array<{ id: string; hostname: string }>;
     return rows.map((r) => {
       const seen = this.lastSeen.get(r.id) ?? 0;
-      return { id: r.id, hostname: r.hostname, lastSeen: seen, online: now - seen < ONLINE_MS, status: this.status.get(r.id) ?? null };
+      return { id: r.id, hostname: r.hostname, lastSeen: seen, online: now - seen < ONLINE_MS, status: this.status.get(r.id) ?? null, profile: this.profile.get(r.id) ?? null };
     });
   }
 
@@ -110,6 +122,7 @@ export class FleetRegistry {
   remove(id: string): void {
     this.db.run("DELETE FROM servers WHERE id=?", [id]);
     this.status.delete(id);
+    this.profile.delete(id);
     this.lastSeen.delete(id);
     this.tools.delete(id);
   }

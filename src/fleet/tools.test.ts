@@ -3,8 +3,9 @@
 
 import { test, expect, describe } from "bun:test";
 import { startFleetHub } from "./hub.ts";
-import { dispatchFleetTool, isFleetTool, agentCustomToolDefs } from "./tools.ts";
+import { dispatchFleetTool, isFleetTool, agentCustomToolDefs, renderFleetMemory } from "./tools.ts";
 import type { StatusSnapshot } from "../status.ts";
+import type { ServerProfile } from "../notify/profile.ts";
 
 const snap = (over: { disk?: number; mem?: number }) => ({
   metrics: { cpu: { load1: 0.5, cores: 4 }, memory: { usedPct: over.mem ?? 30 }, disk: { usedPct: over.disk ?? 40 } },
@@ -68,5 +69,19 @@ describe("fleet tools", () => {
     expect((console.function.parameters.properties as any).query.type).toBe("string");
     // An agent with nothing advertised yields no defs.
     expect(agentCustomToolDefs("missing")).toEqual([]);
+  });
+
+  test("renderFleetMemory condenses each server to one line, flagging failed units", () => {
+    const prof = (over: any) => ({ resources: { memUsedPct: 40, diskUsedPct: 20 }, services: { failed: [] }, notes: [], ...over }) as unknown as ServerProfile;
+    const block = renderFleetMemory([
+      { name: "ctrl", online: true, isSelf: true, profile: prof({}) },
+      { name: "web-1", online: true, profile: prof({ services: { failed: ["worker.service"] }, notes: ["no swap configured"] }) },
+      { name: "db-1", online: false, profile: null },
+    ]);
+    expect(block).toContain("ctrl (this controller)");
+    expect(block).toContain("web-1 (online)");
+    expect(block).toContain("FAILED: worker.service");
+    expect(block).toContain("no swap configured");
+    expect(block).toContain("db-1 (offline): no profile yet");
   });
 });

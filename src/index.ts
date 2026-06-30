@@ -200,11 +200,14 @@ app.get("/fleet", (c) => {
   const servers = (reg ? reg.list() : []).map((s) => ({ ...s, armed: isAgentArmed(s.id) }));
   // canChat = the controller's AI backend can drive a remote box (OpenAI-compatible).
   // joinToken + mesh let the Fleet UI render the "Add server" enroll command.
+  // `self` is the controller's own box memory, so the fleet view can show it too.
+  const own = getServerProfile();
   return c.json({
     enabled: fleetEnabled(),
     canChat: getAI().backend === "openai",
     mesh: config.mesh.enabled,
     joinToken: fleetEnabled() ? config.fleet.joinToken : "",
+    self: own ? { hostname: own.host?.hostname || "controller", profile: own } : null,
     servers,
   });
 });

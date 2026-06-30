@@ -3,6 +3,7 @@
 // (Per-server safety holds: fleet_run goes through each agent's allowlist + arm.)
 
 import type { DispatchResult } from "../tools/index.ts";
+import { getServerProfile, type ServerProfile } from "../notify/profile.ts";
 import { fleetRegistry, sendInvoke } from "./hub.ts";
 
 const PER_BOX_TOOLS = ["run_shell", "pm2_action", "service_action", "check_port", "read_log"] as const;
@@ -44,6 +45,34 @@ export const FLEET_SYSTEM_PROMPT =
   "unhealthy/low on disk\", and overview questions with it. Use fleet_run to run a tool " +
   "on a specific server by hostname (or \"all\"). The plain per-server tools act on the " +
   "controller's own box, so prefer fleet_run when the user asks about a managed server.";
+
+// ── Fleet Memory: a condensed, one-line-per-server overview injected into the
+// controller's system prompt so the assistant opens every fleet chat already
+// knowing which boxes are unhealthy and why (Phase 1 memory, fleet-scale).
+export interface FleetMemEntry { name: string; online: boolean; profile: ServerProfile | null; isSelf?: boolean }
+
+export function renderFleetMemory(entries: FleetMemEntry[]): string {
+  if (!entries.length) return "";
+  const lines = entries.map((e) => {
+    const tag = e.isSelf ? "this controller" : e.online ? "online" : "offline";
+    if (!e.profile) return `- ${e.name} (${tag}): no profile yet`;
+    const p = e.profile;
+    const failed = p.services?.failed?.length ? ` · FAILED: ${p.services.failed.join(", ")}` : "";
+    const note = p.notes?.length ? ` · ${p.notes[0]}` : "";
+    return `- ${e.name} (${tag}): mem ${p.resources?.memUsedPct}% · disk ${p.resources?.diskUsedPct}%${failed}${note}`;
+  });
+  return `Fleet memory (background; one line per server — confirm with fleet_run before acting):\n${lines.join("\n")}`;
+}
+
+export function fleetMemoryBlock(): string {
+  const reg = fleetRegistry();
+  const entries: FleetMemEntry[] = [];
+  const own = getServerProfile();
+  if (own) entries.push({ name: own.host?.hostname || "controller", online: true, profile: own, isSelf: true });
+  for (const s of reg?.list() ?? []) entries.push({ name: s.hostname, online: s.online, profile: s.profile });
+  const block = renderFleetMemory(entries);
+  return block ? `\n\n${block}` : "";
+}
 
 // OpenAI function defs for the custom tools a specific agent advertised. Used
 // when the operator "manages" that server: the AI gets its tools, and a call

@@ -34,11 +34,23 @@ describe("FleetRegistry", () => {
     r.close();
   });
 
-  test("remove drops the server", () => {
+  test("setProfile attaches the agent's Server Memory; list + getProfile return it", () => {
     const r = new FleetRegistry(":memory:");
     r.register("a1", "web-1");
+    const prof = { host: { hostname: "web-1" }, services: { failed: ["worker.service"] } } as any;
+    r.setProfile("a1", prof);
+    expect((r.getProfile("a1") as any).services.failed).toEqual(["worker.service"]);
+    expect((r.list().find((s) => s.id === "a1")!.profile as any).services.failed).toEqual(["worker.service"]);
+    r.close();
+  });
+
+  test("remove drops the server (and its profile)", () => {
+    const r = new FleetRegistry(":memory:");
+    r.register("a1", "web-1");
+    r.setProfile("a1", { host: {} } as any);
     r.remove("a1");
     expect(r.list()).toEqual([]);
+    expect(r.getProfile("a1")).toBeNull();
     r.close();
   });
 

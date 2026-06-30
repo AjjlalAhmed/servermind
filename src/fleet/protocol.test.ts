@@ -1,8 +1,9 @@
 // Wire-protocol parsing/validation. The hub must never throw on bad input.
 
 import { test, expect, describe } from "bun:test";
-import { parseAgentMessage, helloFrame, statusFrame } from "./protocol.ts";
+import { parseAgentMessage, helloFrame, statusFrame, profileFrame } from "./protocol.ts";
 import type { StatusSnapshot } from "../status.ts";
+import type { ServerProfile } from "../notify/profile.ts";
 
 describe("parseAgentMessage", () => {
   test("parses a valid hello", () => {
@@ -32,6 +33,13 @@ describe("parseAgentMessage", () => {
   test("parses a valid status", () => {
     const m = parseAgentMessage(statusFrame({ host: { hostname: "x" } } as unknown as StatusSnapshot));
     expect(m?.type).toBe("status");
+  });
+
+  test("parses a profile frame and carries the payload through", () => {
+    const prof = { host: { hostname: "web-1" }, services: { failed: ["worker.service"] }, notes: ["x"] } as unknown as ServerProfile;
+    const m = parseAgentMessage(profileFrame(prof));
+    expect(m?.type).toBe("profile");
+    if (m?.type === "profile") expect((m.profile as any).services.failed).toEqual(["worker.service"]);
   });
 
   test("rejects junk, bad JSON, and unknown types", () => {

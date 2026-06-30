@@ -11,7 +11,7 @@ import { zodShapeToJsonSchema } from "../tools/jsonschema.ts";
 import { customToolOpenAI } from "../tools/custom.ts";
 import { localAgent } from "../agent.ts";
 import { RemoteAgent } from "../fleet/remote.ts";
-import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, isFleetTool, dispatchFleetTool, agentCustomToolDefs } from "../fleet/tools.ts";
+import { FLEET_TOOLS, FLEET_SYSTEM_PROMPT, fleetMemoryBlock, isFleetTool, dispatchFleetTool, agentCustomToolDefs } from "../fleet/tools.ts";
 import { SYSTEM_PROMPT, profileSuffix, type ChatMessage, type StreamEvent, type ChatOptions } from "../claude.ts";
 
 const MAX_TURNS = 10;
@@ -61,7 +61,7 @@ export async function runChat(
     ? `\n\nThis server exposes custom tools: ${customTools.map((t) => t.function.name).join(", ")}. They run ON this server — use them to answer questions about its data, and pass a read-only SELECT in \`query\` for any db console tool.`
     : "";
   const messages: any[] = [
-    { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") + agentToolNote + profileSuffix() },
+    { role: "system", content: SYSTEM_PROMPT + (opts.fleet ? FLEET_SYSTEM_PROMPT : "") + agentToolNote + profileSuffix() + (opts.fleet ? fleetMemoryBlock() : "") },
     ...history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
       .map((h) => ({ role: h.role, content: h.content })),

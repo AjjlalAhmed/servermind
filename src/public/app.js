@@ -188,9 +188,7 @@ async function loadProfile(refresh) {
     renderProfile(profile);
   } catch { /* keep last */ }
 }
-function renderProfile(p) {
-  const body = $("#profileBody"); if (!body) return;
-  if (!p) { body.innerHTML = `<div class="profile-empty">No profile yet — click <b>Rescan</b>.</div>`; return; }
+function profileHTML(p) {
   const row = (label, val) => `<div class="prow"><span class="pk">${label}</span><span class="pv">${val}</span></div>`;
   const svc = Object.entries(p.services?.monitored || {}).map(([u, s]) =>
     `<span class="ptag ${s === "active" ? "ok" : "warn"}">${esc(u)} ${esc(s)}</span>`).join(" ") || `<span class="pmuted">none configured</span>`;
@@ -202,8 +200,7 @@ function renderProfile(p) {
   const ds = `redis <b class="${/ok|up/i.test(p.datastores?.redis) ? "dok" : "dbad"}">${esc(p.datastores?.redis || "n/a")}</b> · mysql <b class="${/ok|up/i.test(p.datastores?.mysql) ? "dok" : "dbad"}">${esc(p.datastores?.mysql || "n/a")}</b>`;
   const notes = (p.notes || []).length
     ? `<div class="profile-notes">${p.notes.map((n) => `<div class="pnote">⚠ ${esc(n)}</div>`).join("")}</div>` : "";
-  body.innerHTML =
-    `<div class="profile-meta">scanned ${relTime(p.updatedAt)} · ${esc(p.host?.hostname || "")} · up ${esc(p.host?.uptime || "—")} · ${p.host?.cores ?? "?"} cores</div>` +
+  return `<div class="profile-meta">scanned ${relTime(p.updatedAt)} · ${esc(p.host?.hostname || "")} · up ${esc(p.host?.uptime || "—")} · ${p.host?.cores ?? "?"} cores</div>` +
     row("Resources", `mem ${p.resources?.memUsedPct}% of ${esc(p.resources?.memTotal || "?")} · disk ${p.resources?.diskUsedPct}% · swap ${esc(p.resources?.swap || "?")}`) +
     row("Services", svc) + failed +
     row("PM2", pm2) +
@@ -211,6 +208,16 @@ function renderProfile(p) {
     row("Datastores", ds) +
     row("Custom tools", tools) +
     notes;
+}
+function renderProfileInto(el, p, title) {
+  if (!el) return;
+  if (!p) { el.innerHTML = `<div class="profile-empty">No profile for ${esc(title || "this server")} yet.</div>`; return; }
+  el.innerHTML = (title ? `<div class="fm-detail-title">${esc(title)}</div>` : "") + profileHTML(p);
+}
+function renderProfile(p) {
+  const body = $("#profileBody"); if (!body) return;
+  if (!p) { body.innerHTML = `<div class="profile-empty">No profile yet — click <b>Rescan</b>.</div>`; return; }
+  body.innerHTML = profileHTML(p);
 }
 if ($("#profileRefresh")) $("#profileRefresh").onclick = async (e) => {
   const b = e.currentTarget; b.disabled = true; const t = b.textContent; b.textContent = "↻ Scanning…";
@@ -910,7 +917,50 @@ async function loadFleet() {
     const online = d.servers.filter((s) => s.online).length;
     const sum = $("#fleetSummary");
     if (sum) sum.textContent = `${d.servers.length} server${d.servers.length !== 1 ? "s" : ""} · ${online} online`;
+    renderFleetMemory(d);
   } catch { /* keep last render */ }
+}
+
+// "See all at once" — a matrix of every server's Server Memory (controller + all
+// agents), with click-to-expand full per-server detail (reusing renderProfile).
+let fleetMemRows = [];
+function renderFleetMemory(d) {
+  const head = $("#fleetMemoryHead"), panel = $("#fleetMemoryPanel"), body = $("#fleetMemoryBody");
+  if (!head || !panel || !body) return;
+  const rows = [];
+  if (d.self) rows.push({ name: d.self.hostname, tag: "controller", online: true, profile: d.self.profile });
+  for (const s of d.servers || []) rows.push({ name: s.hostname, tag: s.online ? "online" : "offline", online: s.online, profile: s.profile || null });
+  fleetMemRows = rows;
+  if (!rows.length) { head.style.display = "none"; panel.style.display = "none"; return; }
+  head.style.display = ""; panel.style.display = "";
+
+  const cell = (r) => {
+    const p = r.profile;
+    const dot = `<span class="fm-dot ${r.tag === "controller" ? "self" : r.online ? "ok" : "off"}"></span>`;
+    if (!p) return `<tr data-i="${rows.indexOf(r)}"><td>${dot}${esc(r.name)}</td><td colspan="5" class="pmuted">${r.online ? "no profile yet" : "offline"}</td></tr>`;
+    const failed = (p.services?.failed || []).length;
+    const notes = (p.notes || []).length;
+    const ds = `${/ok|up/i.test(p.datastores?.redis) ? "✓" : "✗"}R ${/ok|up/i.test(p.datastores?.mysql) ? "✓" : "✗"}M`;
+    return `<tr data-i="${rows.indexOf(r)}" class="fm-row">
+      <td>${dot}${esc(r.name)} <span class="fm-tag">${r.tag}</span></td>
+      <td class="r ${tone(p.resources?.memUsedPct || 0)}">${p.resources?.memUsedPct ?? "?"}%</td>
+      <td class="r ${tone(p.resources?.diskUsedPct || 0)}">${p.resources?.diskUsedPct ?? "?"}%</td>
+      <td class="r">${failed ? `<span class="fm-bad">${failed}</span>` : "0"}</td>
+      <td class="r">${notes || 0}</td>
+      <td class="r mono">${ds}</td>
+    </tr>`;
+  };
+  body.innerHTML =
+    `<div class="table-scroll"><table class="fm-table"><thead><tr>
+       <th>Server</th><th class="r">Mem</th><th class="r">Disk</th><th class="r">Failed</th><th class="r">Notes</th><th class="r">Stores</th>
+     </tr></thead><tbody>${rows.map(cell).join("")}</tbody></table></div>
+     <div id="fmDetail" class="fm-detail"></div>`;
+  body.querySelectorAll(".fm-row").forEach((tr) => tr.onclick = () => {
+    const r = fleetMemRows[+tr.dataset.i]; if (!r) return;
+    body.querySelectorAll(".fm-row").forEach((x) => x.classList.remove("sel"));
+    tr.classList.add("sel");
+    renderProfileInto($("#fmDetail"), r.profile, r.name);
+  });
 }
 
 // Fleet card actions: "Manage" → chat that server; "Remove" → drop a stale one.

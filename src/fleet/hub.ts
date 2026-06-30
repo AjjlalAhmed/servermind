@@ -72,6 +72,12 @@ export const fleetWebSocket = {
       return;
     }
 
+    if (msg.type === "profile") {
+      if (!ws.data.agentId) { ws.close(1008, "hello required first"); return; }
+      registry?.setProfile(ws.data.agentId, msg.profile);
+      return;
+    }
+
     if (msg.type === "result") {
       if (!ws.data.agentId) { ws.close(1008, "hello required first"); return; } // must enroll first
       const p = pending.get(msg.reqId);
